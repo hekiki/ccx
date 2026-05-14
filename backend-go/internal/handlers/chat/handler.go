@@ -340,6 +340,11 @@ func buildProviderRequest(
 		if err != nil {
 			return nil, err
 		}
+		// Gemini 3 要求 tool_calls 中包含 thought_signature，注入 dummy 值跳过验证
+		// 尊重 stripThoughtSignature 配置：如果渠道明确要求移除 signature 则跳过注入
+		if !upstream.StripThoughtSignature {
+			requestBody = injectGeminiThoughtSignatures(requestBody)
+		}
 		if skipVersionPrefix {
 			url = fmt.Sprintf("%s/chat/completions", strings.TrimRight(baseURL, "/"))
 		} else {
@@ -1087,4 +1092,87 @@ func handleAllKeysFailed(c *gin.Context, failoverErr *common.FailoverError, last
 	}
 
 	chatErrorResponse(c, 503, errMsg, "service_unavailable")
+}
+
+// injectGeminiThoughtSignatures 为 Gemini 上游注入 thought_signature
+// Gemini 3 模型要求 assistant message 中每个 step 的第一个 tool_call 必须包含 thought_signature，
+// 否则返回 400。对于没有 thought_signature 的 tool_calls，注入 dummy 值跳过验证。
+// 参考: https://ai.google.dev/gemini-api/docs/thought-signatures
+func injectGeminiThoughtSignatures(body []byte) []byte {
+	var reqMap map[string]interface{}
+	if err := json.Unmarshal(body, &reqMap); err != nil {
+		return body
+	}
+
+	messages, ok := reqMap["messages"].([]interface{})
+	if !ok {
+		return body
+	}
+
+	modified := false
+	for _, msg := range messages {
+		msgMap, ok := msg.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		role, _ := msgMap["role"].(string)
+		if role != "assistant" {
+			continue
+		}
+
+		toolCalls, ok := msgMap["tool_calls"].([]interface{})
+		if !ok || len(toolCalls) == 0 {
+			continue
+		}
+
+		// 只需要为第一个 tool_call 注入（parallel FC 只有第一个需要 signature）
+		firstTC, ok := toolCalls[0].(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		// 检查是否已有 extra_content.google.thought_signature
+		if hasThoughtSignature(firstTC) {
+			continue
+		}
+
+		// 注入 dummy thought_signature，保留已有的 extra_content 字段
+		extraContent, ok := firstTC["extra_content"].(map[string]interface{})
+		if !ok {
+			extraContent = map[string]interface{}{}
+		}
+		google, ok := extraContent["google"].(map[string]interface{})
+		if !ok {
+			google = map[string]interface{}{}
+		}
+		google["thought_signature"] = types.DummyThoughtSignature
+		extraContent["google"] = google
+		firstTC["extra_content"] = extraContent
+		modified = true
+	}
+
+	if !modified {
+		return body
+	}
+
+	result, err := json.Marshal(reqMap)
+	if err != nil {
+		return body
+	}
+	return result
+}
+
+// hasThoughtSignature 检查 tool_call 是否已包含 thought_signature
+func hasThoughtSignature(toolCall map[string]interface{}) bool {
+	extraContent, ok := toolCall["extra_content"].(map[string]interface{})
+	if !ok {
+		return false
+	}
+	google, ok := extraContent["google"].(map[string]interface{})
+	if !ok {
+		return false
+	}
+	sig, ok := google["thought_signature"].(string)
+	return ok && sig != ""
 }

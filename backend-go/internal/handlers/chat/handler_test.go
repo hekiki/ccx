@@ -305,3 +305,110 @@ func TestBuildProviderRequest_PreservesMultimodalContentArray(t *testing.T) {
 		})
 	}
 }
+
+func TestInjectGeminiThoughtSignatures(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		wantSig  bool
+		wantKeep string // 如果非空，期望保留原始 signature
+	}{
+		{
+			name: "注入 dummy signature 到缺失的 tool_calls",
+			input: `{"model":"gemini-3-pro","messages":[
+				{"role":"user","content":"hi"},
+				{"role":"assistant","tool_calls":[
+					{"id":"call_1","type":"function","function":{"name":"test","arguments":"{}"}}
+				]},
+				{"role":"tool","tool_call_id":"call_1","content":"ok"}
+			]}`,
+			wantSig: true,
+		},
+		{
+			name: "保留已有的 thought_signature",
+			input: `{"model":"gemini-3-pro","messages":[
+				{"role":"user","content":"hi"},
+				{"role":"assistant","tool_calls":[
+					{"id":"call_1","type":"function","function":{"name":"test","arguments":"{}"},
+					 "extra_content":{"google":{"thought_signature":"real_sig_abc"}}}
+				]},
+				{"role":"tool","tool_call_id":"call_1","content":"ok"}
+			]}`,
+			wantSig:  true,
+			wantKeep: "real_sig_abc",
+		},
+		{
+			name:    "无 tool_calls 不修改",
+			input:   `{"model":"gemini-3-pro","messages":[{"role":"user","content":"hi"}]}`,
+			wantSig: false,
+		},
+		{
+			name: "保留已有 extra_content 中的其他字段",
+			input: `{"model":"gemini-3-pro","messages":[
+				{"role":"user","content":"hi"},
+				{"role":"assistant","tool_calls":[
+					{"id":"call_1","type":"function","function":{"name":"test","arguments":"{}"},
+					 "extra_content":{"custom_key":"custom_value","google":{"other_field":"keep_me"}}}
+				]},
+				{"role":"tool","tool_call_id":"call_1","content":"ok"}
+			]}`,
+			wantSig: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := injectGeminiThoughtSignatures([]byte(tt.input))
+
+			var reqMap map[string]interface{}
+			if err := json.Unmarshal(result, &reqMap); err != nil {
+				t.Fatalf("unmarshal result: %v", err)
+			}
+
+			messages := reqMap["messages"].([]interface{})
+			for _, msg := range messages {
+				msgMap := msg.(map[string]interface{})
+				if msgMap["role"] != "assistant" {
+					continue
+				}
+				toolCalls, ok := msgMap["tool_calls"].([]interface{})
+				if !ok || len(toolCalls) == 0 {
+					continue
+				}
+
+				firstTC := toolCalls[0].(map[string]interface{})
+				extraContent, hasEC := firstTC["extra_content"].(map[string]interface{})
+
+				if tt.wantSig && !hasEC {
+					t.Fatal("expected extra_content but not found")
+				}
+				if !tt.wantSig {
+					return
+				}
+
+				google := extraContent["google"].(map[string]interface{})
+				sig := google["thought_signature"].(string)
+
+				if tt.wantKeep != "" {
+					if sig != tt.wantKeep {
+						t.Fatalf("expected signature %q, got %q", tt.wantKeep, sig)
+					}
+				} else {
+					if sig == "" {
+						t.Fatal("expected non-empty signature")
+					}
+				}
+
+				// 验证 merge 行为：已有的 extra_content 字段应被保留
+				if tt.name == "保留已有 extra_content 中的其他字段" {
+					if _, ok := extraContent["custom_key"]; !ok {
+						t.Fatal("extra_content.custom_key was lost during merge")
+					}
+					if otherField, ok := google["other_field"].(string); !ok || otherField != "keep_me" {
+						t.Fatal("extra_content.google.other_field was lost during merge")
+					}
+				}
+			}
+		})
+	}
+}
