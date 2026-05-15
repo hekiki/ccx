@@ -127,4 +127,14 @@ func TestConversationTracker_MaskUserID(t *testing.T) {
 	if result != "long***fier" {
 		t.Errorf("expected long***fier, got %s", result)
 	}
+
+	result = maskUserID("user_abc123_session_dbf5ffc0-dea5-44ca")
+	if result != "sess:dbf5ffc0" {
+		t.Errorf("expected sess:dbf5ffc0, got %s", result)
+	}
+
+	result = maskUserID("a_very_long_user_id_that_has_no_sess_keyword_1234567890")
+	if result != "a_very_l...7890" {
+		t.Errorf("expected a_very_l...7890, got %s", result)
+	}
 }

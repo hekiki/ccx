@@ -5,14 +5,14 @@
     @click="!expanded && $emit('toggleExpand')"
   >
     <v-card-text class="pa-3">
-      <!-- Row 1: Status + Kind + ID + Stats -->
+      <!-- Row 1: Status + Kind + User + Stats -->
       <div class="d-flex align-center ga-2 mb-1">
         <v-icon :color="statusColor" size="10">mdi-circle</v-icon>
         <v-chip :color="kindColor" size="x-small" variant="flat">{{ conversation.kind }}</v-chip>
         <span class="text-caption font-weight-mono text-medium-emphasis">
-          <v-tooltip :text="conversation.id" location="top" :open-delay="150" content-class="ccx-tooltip">
+          <v-tooltip :text="`${conversation.id}\n${conversation.userId}`" location="top" :open-delay="150" content-class="ccx-tooltip">
             <template #activator="{ props: tp }">
-              <span v-bind="tp">{{ conversation.id.slice(0, 12) }}...</span>
+              <span v-bind="tp">{{ conversation.userId }}</span>
             </template>
           </v-tooltip>
         </span>

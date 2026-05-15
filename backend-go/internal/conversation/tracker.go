@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"log"
+	"strings"
 	"sync"
 	"time"
 )
@@ -242,6 +243,16 @@ func (ct *ConversationTracker) removeConversation(id string, conv *Conversation)
 func maskUserID(userID string) string {
 	if len(userID) <= 8 {
 		return userID[:1] + "***"
+	}
+	if idx := strings.Index(userID, "_session_"); idx >= 0 {
+		sessionPart := userID[idx+9:]
+		if len(sessionPart) > 8 {
+			sessionPart = sessionPart[:8]
+		}
+		return "sess:" + sessionPart
+	}
+	if len(userID) > 20 {
+		return userID[:8] + "..." + userID[len(userID)-4:]
 	}
 	return userID[:4] + "***" + userID[len(userID)-4:]
 }

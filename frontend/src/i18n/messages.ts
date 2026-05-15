@@ -1224,7 +1224,7 @@ export const messages: Record<SupportedLocale, Record<MessageKey, string>> = {
     'app.tabs.responses': 'Codex',
     'app.tabs.gemini': 'Gemini',
     'app.tabs.images': 'Images',
-    'app.tabs.conversations': 'Cockpit',
+    'app.tabs.conversations': '驾驶舱',
     'app.header.logout': '注销',
     'app.stats.trafficTitle': '{tab} 流量统计',
     'app.stats.totalChannels': '总渠道数',

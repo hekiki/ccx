@@ -96,23 +96,23 @@
 
         <!-- 桌面端：平铺链接 -->
         <div v-else class="text-h6 font-weight-bold d-flex align-center">
-          <router-link to="/channels/messages" class="api-type-text" :class="{ active: channelStore.activeTab === 'messages' }">
+          <router-link to="/channels/messages" class="api-type-text" :class="{ active: channelStore.activeTab === 'messages' && route.path !== '/conversations' }">
             {{ t('app.tabs.messages') }}
           </router-link>
           <span class="api-type-text separator">/</span>
-          <router-link to="/channels/chat" class="api-type-text" :class="{ active: channelStore.activeTab === 'chat' }">
+          <router-link to="/channels/chat" class="api-type-text" :class="{ active: channelStore.activeTab === 'chat' && route.path !== '/conversations' }">
             {{ t('app.tabs.chat') }}
           </router-link>
           <span class="api-type-text separator">/</span>
-          <router-link to="/channels/images" class="api-type-text" :class="{ active: channelStore.activeTab === 'images' }">
+          <router-link to="/channels/images" class="api-type-text" :class="{ active: channelStore.activeTab === 'images' && route.path !== '/conversations' }">
             {{ t('app.tabs.images') }}
           </router-link>
           <span class="api-type-text separator">/</span>
-          <router-link to="/channels/responses" class="api-type-text" :class="{ active: channelStore.activeTab === 'responses' }">
+          <router-link to="/channels/responses" class="api-type-text" :class="{ active: channelStore.activeTab === 'responses' && route.path !== '/conversations' }">
             {{ t('app.tabs.responses') }}
           </router-link>
           <span class="api-type-text separator">/</span>
-          <router-link to="/channels/gemini" class="api-type-text" :class="{ active: channelStore.activeTab === 'gemini' }">
+          <router-link to="/channels/gemini" class="api-type-text" :class="{ active: channelStore.activeTab === 'gemini' && route.path !== '/conversations' }">
             {{ t('app.tabs.gemini') }}
           </router-link>
           <span class="api-type-text separator">/</span>
