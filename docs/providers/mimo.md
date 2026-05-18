@@ -2,33 +2,67 @@
 
 ## 获取 API Key
 
-1. 访问 [小米 MiMo 平台](https://platform.xiaomimimo.com/)
-2. 注册并登录账号
-3. 在 [套餐管理](https://platform.xiaomimimo.com/console/plan-manage) 页面选择适合的套餐
-4. 在 [API Keys](https://platform.xiaomimimo.com/console/api-keys) 页面创建新的 API Key 并复制
+MiMo 提供两种访问方式，凭证获取路径不同：
 
-::: tip
-账号余额可在 [余额页面](https://platform.xiaomimimo.com/console/balance) 查看。
-:::
+### 订阅套餐（推荐）
+
+1. 访问 [小米 MiMo 平台](https://platform.xiaomimimo.com/)
+2. 在 [套餐管理](https://platform.xiaomimimo.com/console/plan-manage) 页面选择并订阅套餐
+3. 前往 [订阅管理](https://platform.xiaomimimo.com/console/plan-manage) 页面获取凭证：
+   - **API Key**：格式为 `tp-xxxxx`
+   - **Base URL**：根据你选择的集群和协议类型（见下方）
+
+### 账号余额
+
+1. 访问 [小米 MiMo 平台](https://platform.xiaomimimo.com/)
+2. 在 [余额页面](https://platform.xiaomimimo.com/console/balance) 充值
+3. 在 [API Keys](https://platform.xiaomimimo.com/console/api-keys) 页面创建 API Key
 
 ## 在 CCX 中添加渠道
 
+根据你的访问方式选择对应的 Base URL。
+
+### 订阅套餐
+
+Base URL 按集群和协议分类，以 [订阅管理](https://platform.xiaomimimo.com/console/plan-manage) 页面展示为准：
+
+#### OpenAI 兼容协议
+
+| 集群 | Base URL |
+|------|----------|
+| 中国 | `https://token-plan-cn.xiaomimimo.com/v1` |
+| 新加坡 | `https://token-plan-sgp.xiaomimimo.com/v1` |
+| 欧洲 | `https://token-plan-ams.xiaomimimo.com/v1` |
+
+#### Anthropic 兼容协议
+
+| 集群 | Base URL |
+|------|----------|
+| 中国 | `https://token-plan-cn.xiaomimimo.com/anthropic` |
+| 新加坡 | `https://token-plan-sgp.xiaomimimo.com/anthropic` |
+| 欧洲 | `https://token-plan-ams.xiaomimimo.com/anthropic` |
+
+::: tip
+使用 Claude Code CLI 时，可选择 Anthropic 兼容协议端点，服务类型选 `claude`。
+:::
+
+### 账号余额
+
 | 字段 | 值 |
 |------|-----|
-| 名称 | `MiMo`（自定义） |
 | 服务类型 | `openai` |
 | Base URL | `https://api.mimo.xiaomi.com/v1` |
-| API Keys | 你的 MiMo API Key |
+| API Keys | 你在 [API Keys](https://platform.xiaomimimo.com/console/api-keys) 页面创建的 Key |
 
-### 配置步骤
+### 配置步骤（以订阅套餐 OpenAI 协议中国集群为例）
 
 1. 进入 CCX 管理界面，选择 **Chat** 入口
 2. 点击「添加渠道」
 3. 填写以下信息：
    - **名称**：`MiMo`
    - **服务类型**：选择 `OpenAI Chat`
-   - **Base URL**：`https://api.mimo.xiaomi.com/v1`
-   - **API Keys**：粘贴你的 API Key
+   - **Base URL**：`https://token-plan-cn.xiaomimimo.com/v1`
+   - **API Keys**：粘贴你的 `tp-xxxxx` 订阅 Key
 4. 点击保存
 
 ### 模型白名单（可选）
