@@ -7,6 +7,10 @@
   - 新实现保留所有原有 thinking 块，对缺少 thinking 块的 assistant 消息注入占位 thinking 块 `{"type":"thinking","thinking":"(no prior reasoning recorded)"}`，让 mimo 通过 thinking mode 校验
   - 仅在渠道开启 `passbackReasoningContent: true` 时生效，对其他渠道无影响
   - 注意：旧对话切到 mimo 时模型上下文缺少真实推理内容，可能出现幻觉/指令遵循下降（mimo 官方公告明示的代价）
+- **OpenAI Provider 缓存 Token 丢失** - 修复 OpenAI Provider 在协议转换（OpenAI/DeepSeek → Claude Messages）时丢弃上游 cache usage 字段的问题（#76）
+  - 流式：`HandleStreamResponse` 现在从 terminal usage chunk（`choices: []`）中提取 `prompt_cache_hit_tokens`、`prompt_tokens_details.cached_tokens` 等字段，并注入到 final `message_delta.usage` 中
+  - 非流式：`ConvertToClaudeResponse` 新增二次 raw parse，将 DeepSeek/OpenAI 格式的 cache 字段映射到 `CacheReadInputTokens`
+  - Metrics：`annotatePromptTokensTotalForProvider` 扩展到 OpenAI Provider，确保缓存命中归一化口径与 Responses Provider 一致
 
 ## [v2.7.3] - 2026-05-18
 

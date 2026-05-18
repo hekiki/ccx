@@ -385,6 +385,17 @@ func (p *OpenAIProvider) ConvertToClaudeResponse(providerResp *types.ProviderRes
 			InputTokens:  openaiResp.Usage.PromptTokens,
 			OutputTokens: openaiResp.Usage.CompletionTokens,
 		}
+		// 二次解析 raw body 中的 usage 以提取 cache 字段（DeepSeek/OpenAI 格式）
+		var raw struct {
+			Usage map[string]interface{} `json:"usage"`
+		}
+		if json.Unmarshal(providerResp.Body, &raw) == nil && raw.Usage != nil {
+			extractOpenAICacheToUsage(raw.Usage, claudeResp.Usage)
+		}
+		// 保留总 prompt token 口径给 metrics 层
+		if claudeResp.Usage.InputTokens > 0 {
+			claudeResp.Usage.PromptTokensTotal = claudeResp.Usage.InputTokens
+		}
 	}
 
 	return claudeResp, nil
@@ -410,6 +421,7 @@ func (p *OpenAIProvider) HandleStreamResponse(body io.ReadCloser) (<-chan string
 		toolUseStopEmitted := false
 		messageStartSent := false
 		stopReason := ""
+		var streamUsage map[string]interface{}
 
 		emitContentBlockStop := func(index int) {
 			stopEvent := map[string]interface{}{
@@ -449,6 +461,13 @@ func (p *OpenAIProvider) HandleStreamResponse(body io.ReadCloser) (<-chan string
 			if errObj, ok := chunk["error"]; ok {
 				errChan <- fmt.Errorf("upstream error: %v", errObj)
 				return
+			}
+
+			// 提取 usage（通常在最后一个 chunk，choices 为空）
+			if u, ok := chunk["usage"].(map[string]interface{}); ok {
+				if normalized := normalizeOpenAIUsage(u); normalized != nil {
+					streamUsage = mergeUsageMaps(streamUsage, normalized)
+				}
 			}
 
 			choices, ok := chunk["choices"].([]interface{})
@@ -673,6 +692,9 @@ func (p *OpenAIProvider) HandleStreamResponse(body io.ReadCloser) (<-chan string
 					"stop_reason": stopReason,
 				},
 			}
+			if streamUsage != nil {
+				deltaEvent["usage"] = streamUsage
+			}
 			deltaJSON, _ := json.Marshal(deltaEvent)
 			eventChan <- fmt.Sprintf("event: message_delta\ndata: %s\n\n", deltaJSON)
 
@@ -807,4 +829,206 @@ func normalizeRole(role string) string {
 
 func generateID() string {
 	return fmt.Sprintf("msg_%d", time.Now().UnixNano())
+}
+
+// normalizeOpenAIUsage 将 OpenAI/DeepSeek 格式的 usage map 归一化为 Claude 风格 usage map。
+// 支持 DeepSeek (prompt_cache_hit_tokens)、OpenAI (prompt_tokens_details.cached_tokens)、
+// 以及直接的 Claude 风格字段 (cache_read_input_tokens)。
+// 如果无任何可识别字段，返回 nil。
+func normalizeOpenAIUsage(u map[string]interface{}) map[string]interface{} {
+	if u == nil {
+		return nil
+	}
+
+	result := map[string]interface{}{}
+	hasField := false
+
+	// 输入总量：input_tokens → prompt_tokens → (prompt_cache_hit_tokens + prompt_cache_miss_tokens) 兜底
+	if v, exists := u["input_tokens"]; exists {
+		if f, ok := v.(float64); ok {
+			result["input_tokens"] = int(f)
+			hasField = true
+		}
+	} else if v, exists := u["prompt_tokens"]; exists {
+		if f, ok := v.(float64); ok {
+			result["input_tokens"] = int(f)
+			hasField = true
+		}
+	} else {
+		// 兜底：当 hit 和 miss 都明确存在时，合成总量 = hit + miss
+		_, hitExists := u["prompt_cache_hit_tokens"]
+		_, missExists := u["prompt_cache_miss_tokens"]
+		if hitExists && missExists {
+			hit := 0
+			miss := 0
+			if f, ok := u["prompt_cache_hit_tokens"].(float64); ok {
+				hit = int(f)
+			}
+			if f, ok := u["prompt_cache_miss_tokens"].(float64); ok {
+				miss = int(f)
+			}
+			if hit+miss > 0 {
+				result["input_tokens"] = hit + miss
+				hasField = true
+			}
+		}
+	}
+
+	// 输出总量：output_tokens → completion_tokens
+	if v, exists := u["output_tokens"]; exists {
+		if f, ok := v.(float64); ok {
+			result["output_tokens"] = int(f)
+			hasField = true
+		}
+	} else if v, exists := u["completion_tokens"]; exists {
+		if f, ok := v.(float64); ok {
+			result["output_tokens"] = int(f)
+			hasField = true
+		}
+	}
+
+	// 缓存读取（按优先级，别名候选不相加）：
+	// cache_read_input_tokens → prompt_cache_hit_tokens → input_tokens_details.cached_tokens → prompt_tokens_details.cached_tokens
+	cacheRead := 0
+	cacheReadFound := false
+	if v, exists := u["cache_read_input_tokens"]; exists {
+		if f, ok := v.(float64); ok {
+			cacheRead = int(f)
+			cacheReadFound = true
+		}
+	}
+	if !cacheReadFound {
+		if v, exists := u["prompt_cache_hit_tokens"]; exists {
+			if f, ok := v.(float64); ok {
+				cacheRead = int(f)
+				cacheReadFound = true
+			}
+		}
+	}
+	if !cacheReadFound {
+		if details, ok := u["input_tokens_details"].(map[string]interface{}); ok {
+			if v, ok := details["cached_tokens"].(float64); ok {
+				cacheRead = int(v)
+				cacheReadFound = true
+			}
+		}
+	}
+	if !cacheReadFound {
+		if details, ok := u["prompt_tokens_details"].(map[string]interface{}); ok {
+			if v, ok := details["cached_tokens"].(float64); ok {
+				cacheRead = int(v)
+				cacheReadFound = true
+			}
+		}
+	}
+	if cacheReadFound {
+		result["cache_read_input_tokens"] = cacheRead
+		hasField = true
+	}
+
+	// 缓存创建：直接透传
+	if v, exists := u["cache_creation_input_tokens"]; exists {
+		if f, ok := v.(float64); ok {
+			result["cache_creation_input_tokens"] = int(f)
+			hasField = true
+		}
+	}
+	if v, exists := u["cache_creation_5m_input_tokens"]; exists {
+		if f, ok := v.(float64); ok {
+			result["cache_creation_5m_input_tokens"] = int(f)
+			hasField = true
+		}
+	}
+	if v, exists := u["cache_creation_1h_input_tokens"]; exists {
+		if f, ok := v.(float64); ok {
+			result["cache_creation_1h_input_tokens"] = int(f)
+			hasField = true
+		}
+	}
+	if v, exists := u["cache_ttl"]; exists {
+		if s, ok := v.(string); ok && s != "" {
+			result["cache_ttl"] = s
+			hasField = true
+		}
+	}
+
+	if !hasField {
+		return nil
+	}
+	return result
+}
+
+// mergeUsageMaps 将 src 中的字段按 last-write-wins 合并到 dst。
+// 不会用空/nil src 覆盖已有 dst。
+func mergeUsageMaps(dst, src map[string]interface{}) map[string]interface{} {
+	if src == nil {
+		return dst
+	}
+	if dst == nil {
+		return src
+	}
+	for k, v := range src {
+		dst[k] = v
+	}
+	return dst
+}
+
+// extractOpenAICacheToUsage 从 raw usage map 中提取 cache 字段并填入 types.Usage。
+// 用于非流式 ConvertToClaudeResponse。
+func extractOpenAICacheToUsage(u map[string]interface{}, usage *types.Usage) {
+	if u == nil || usage == nil {
+		return
+	}
+
+	// 缓存读取（按优先级）
+	if usage.CacheReadInputTokens == 0 {
+		if v, exists := u["cache_read_input_tokens"]; exists {
+			if f, ok := v.(float64); ok && int(f) > 0 {
+				usage.CacheReadInputTokens = int(f)
+			}
+		}
+	}
+	if usage.CacheReadInputTokens == 0 {
+		if v, exists := u["prompt_cache_hit_tokens"]; exists {
+			if f, ok := v.(float64); ok && int(f) > 0 {
+				usage.CacheReadInputTokens = int(f)
+			}
+		}
+	}
+	if usage.CacheReadInputTokens == 0 {
+		if details, ok := u["input_tokens_details"].(map[string]interface{}); ok {
+			if v, ok := details["cached_tokens"].(float64); ok && int(v) > 0 {
+				usage.CacheReadInputTokens = int(v)
+			}
+		}
+	}
+	if usage.CacheReadInputTokens == 0 {
+		if details, ok := u["prompt_tokens_details"].(map[string]interface{}); ok {
+			if v, ok := details["cached_tokens"].(float64); ok && int(v) > 0 {
+				usage.CacheReadInputTokens = int(v)
+			}
+		}
+	}
+
+	// 缓存创建
+	if v, exists := u["cache_creation_input_tokens"]; exists {
+		if f, ok := v.(float64); ok && int(f) > 0 {
+			usage.CacheCreationInputTokens = int(f)
+		}
+	}
+	if v, exists := u["cache_creation_5m_input_tokens"]; exists {
+		if f, ok := v.(float64); ok && int(f) > 0 {
+			usage.CacheCreation5mInputTokens = int(f)
+		}
+	}
+	if v, exists := u["cache_creation_1h_input_tokens"]; exists {
+		if f, ok := v.(float64); ok && int(f) > 0 {
+			usage.CacheCreation1hInputTokens = int(f)
+		}
+	}
+	if v, exists := u["cache_ttl"]; exists {
+		if s, ok := v.(string); ok && s != "" {
+			usage.CacheTTL = s
+		}
+	}
 }

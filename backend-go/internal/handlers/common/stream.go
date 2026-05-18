@@ -979,8 +979,11 @@ func annotatePromptTokensTotalForProvider(provider providers.Provider, usage *ty
 	if usage == nil {
 		return nil
 	}
-	if _, ok := provider.(*providers.ResponsesProvider); ok && usage.InputTokens > 0 {
-		usage.PromptTokensTotal = usage.InputTokens
+	switch provider.(type) {
+	case *providers.ResponsesProvider, *providers.OpenAIProvider:
+		if usage.InputTokens > 0 {
+			usage.PromptTokensTotal = usage.InputTokens
+		}
 	}
 	return usage
 }
