@@ -868,11 +868,11 @@ func ProcessStreamEvent(
 		}
 	}
 
-	// 记录 message_start 中的 input_tokens（用于后续推断隐式缓存）
-	// 注意：必须在 PatchMessageStartInputTokensIfNeeded 之后执行，因为原始值可能是 0 被修补成估算值
+	// 记录上游原始 message_start 中的 input_tokens（用于后续推断隐式缓存）。
+	// eventToSend 可能已经被本地估算值修补，不能作为缓存推断依据。
 	if IsMessageStartEvent(event) && ctx.MessageStartInputTokens == 0 {
-		if patchedInputTokens := ExtractInputTokensFromEvent(eventToSend); patchedInputTokens > 0 {
-			ctx.MessageStartInputTokens = patchedInputTokens
+		if upstreamInputTokens := ExtractInputTokensFromEvent(event); upstreamInputTokens > 1 {
+			ctx.MessageStartInputTokens = upstreamInputTokens
 		}
 	}
 

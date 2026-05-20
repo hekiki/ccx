@@ -607,6 +607,44 @@ func TestProcessStreamEvent_MessageStopInjectsUsageWhenMessageDeltaMissing(t *te
 	}
 }
 
+func TestProcessStreamEvent_PatchedMessageStartDoesNotInferCacheRead(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", strings.NewReader(`{}`))
+
+	flusher, ok := c.Writer.(http.Flusher)
+	if !ok {
+		t.Fatalf("response writer does not implement http.Flusher")
+	}
+
+	ctx := &StreamContext{
+		ContentBlockTypes: make(map[int]string),
+		LogBuffer:         NewLimitedLogBuffer(MaxUpstreamResponseLogBytes),
+	}
+	envCfg := &config.EnvConfig{LogLevel: "info"}
+	requestBody := []byte(`{"messages":[{"role":"user","content":[{"type":"text","text":"hello world hello world hello world hello world"}]}]}`)
+
+	messageStartEvent := "event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"usage\":{\"input_tokens\":0,\"output_tokens\":0}}}\n\n"
+	ProcessStreamEvent(c, c.Writer, flusher, messageStartEvent, ctx, envCfg, requestBody)
+
+	if ctx.MessageStartInputTokens != 0 {
+		t.Fatalf("expected patched message_start estimate not to be recorded for cache inference, got %d", ctx.MessageStartInputTokens)
+	}
+
+	messageDeltaEvent := "event: message_delta\ndata: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"tool_use\"},\"usage\":{\"input_tokens\":10473,\"output_tokens\":27}}\n\n"
+	ProcessStreamEvent(c, c.Writer, flusher, messageDeltaEvent, ctx, envCfg, requestBody)
+
+	if ctx.CollectedUsage.CacheReadInputTokens != 0 {
+		t.Fatalf("expected no inferred cache_read from patched message_start estimate, got %d", ctx.CollectedUsage.CacheReadInputTokens)
+	}
+
+	body := w.Body.String()
+	if strings.Contains(body, "cache_read_input_tokens") {
+		t.Fatalf("expected forwarded stream not to include inferred cache_read_input_tokens, body=%s", body)
+	}
+}
+
 func TestDetectStreamBlacklistError_BalanceMessages(t *testing.T) {
 	tests := []struct {
 		name        string
