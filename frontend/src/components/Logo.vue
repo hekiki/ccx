@@ -118,7 +118,7 @@ const sizeStyle = computed(() => {
 }
 
 .ccx-orbit {
-  opacity: 0.35;
+  opacity: 0.55; /* 上调透明度，确保在明色（黄油白底）与暗色应用栏下都具备清晰的轮廓辨识度 */
 }
 
 .ccx-path {

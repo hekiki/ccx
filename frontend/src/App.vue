@@ -1875,9 +1875,9 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #040711 !important; /* 采用极具深邃感的暗黑虚空色，以最完美的对比度衬托流光 SVG 渐变 */
-  border: 2px solid rgb(var(--v-theme-on-surface));
-  box-shadow: 3px 3px 0 0 rgb(var(--v-theme-on-surface));
+  background: transparent !important; /* 改为完全透明背景，使 Logo 完美悬浮融入应用栏 */
+  border: none !important;            /* 移除多余的重边框，以优雅的无框形态呈现 */
+  box-shadow: none !important;         /* 移除不搭调的硬暗色投影 */
   margin-right: 8px;
 }
 
