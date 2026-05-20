@@ -3,6 +3,8 @@ package providers
 import (
 	"bufio"
 	"bytes"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -634,7 +636,7 @@ func (p *GeminiProvider) HandleStreamResponse(body io.ReadCloser) (<-chan string
 
 					name, _ := fc["name"].(string)
 					args := fc["args"]
-					id := fmt.Sprintf("toolu_%d", toolUseBlockIndex)
+					id := generateGeminiToolCallID(toolUseBlockIndex)
 
 					events := processToolUsePart(id, name, args, toolUseBlockIndex)
 					for _, event := range events {
@@ -726,4 +728,13 @@ func mapGeminiFinishReasonToClaudeStopReason(finishReason string) string {
 	default:
 		return ""
 	}
+}
+
+func generateGeminiToolCallID(index int) string {
+	var randomBytes [16]byte
+	if _, err := rand.Read(randomBytes[:]); err == nil {
+		return "call_" + hex.EncodeToString(randomBytes[:])
+	}
+
+	return fmt.Sprintf("call_%d", index)
 }

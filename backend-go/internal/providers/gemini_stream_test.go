@@ -38,6 +38,34 @@ func extractMessageDelta(t *testing.T, events []string) map[string]interface{} {
 	return nil
 }
 
+func extractContentBlockStart(t *testing.T, events []string, blockType string) map[string]interface{} {
+	t.Helper()
+	for _, event := range events {
+		for _, line := range strings.Split(event, "\n") {
+			if !strings.HasPrefix(line, "data: ") {
+				continue
+			}
+			jsonStr := strings.TrimPrefix(line, "data: ")
+
+			var data map[string]interface{}
+			if err := json.Unmarshal([]byte(jsonStr), &data); err != nil {
+				continue
+			}
+			if data["type"] != "content_block_start" {
+				continue
+			}
+			contentBlock, ok := data["content_block"].(map[string]interface{})
+			if !ok || contentBlock["type"] != blockType {
+				continue
+			}
+			return data
+		}
+	}
+
+	t.Fatalf("content_block_start(%s) not found, events=%v", blockType, events)
+	return nil
+}
+
 func TestGeminiHandleStreamResponse_UsageOnlyChunkStillAffectsMessageDeltaUsage(t *testing.T) {
 	body := strings.Join([]string{
 		`data: {"candidates":[{"content":{"parts":[{"text":"OK"}]},"finishReason":"STOP"}]}`,
@@ -185,7 +213,6 @@ func TestGeminiHandleStreamResponse_SafetyFinishReasonMapsToEndTurn(t *testing.T
 	}
 }
 
-
 func TestGeminiHandleStreamResponse_FunctionCallMapsStopReasonToToolUse(t *testing.T) {
 	body := strings.Join([]string{
 		`data: {"candidates":[{"content":{"parts":[{"functionCall":{"name":"mcp__serena__check_onboarding_performed","args":{}}}]},"finishReason":"STOP"}]}`,
@@ -215,5 +242,19 @@ func TestGeminiHandleStreamResponse_FunctionCallMapsStopReasonToToolUse(t *testi
 	stopReason, _ := delta["stop_reason"].(string)
 	if stopReason != "tool_use" {
 		t.Fatalf("expected stop_reason=tool_use for functionCall stream, got %q", stopReason)
+	}
+
+	toolUseStart := extractContentBlockStart(t, events, "tool_use")
+	contentBlock, ok := toolUseStart["content_block"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("content_block missing in tool_use start event: %v", toolUseStart)
+	}
+
+	toolUseID, _ := contentBlock["id"].(string)
+	if !strings.HasPrefix(toolUseID, "call_") {
+		t.Fatalf("expected Gemini functionCall tool_use id to use call_ prefix, got %q", toolUseID)
+	}
+	if strings.HasPrefix(toolUseID, "toolu_") {
+		t.Fatalf("expected Gemini functionCall tool_use id not to use toolu_ prefix, got %q", toolUseID)
 	}
 }
