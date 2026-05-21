@@ -189,6 +189,7 @@ const submit = async () => {
               </option>
             </select>
             <p class="text-xs text-slate-500">{{ currentPlan?.description }}</p>
+            <p v-if="currentPlan?.baseUrl && !currentPlan?.custom" class="text-xs text-slate-400 font-mono">{{ currentPlan.baseUrl }}</p>
           </div>
         </div>
 
