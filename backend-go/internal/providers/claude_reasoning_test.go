@@ -183,6 +183,7 @@ func TestConvertThinkingToReasoningContent(t *testing.T) {
 						"role":              "assistant",
 						"reasoning_content": "let me think",
 						"content": []interface{}{
+							map[string]interface{}{"type": "thinking", "thinking": "let me think", "signature": "sig_123"},
 							map[string]interface{}{"type": "text", "text": "response"},
 						},
 					},
@@ -190,7 +191,7 @@ func TestConvertThinkingToReasoningContent(t *testing.T) {
 			},
 		},
 		{
-			name: "无 thinking 块的 assistant 消息补顶层 reasoning_content",
+			name: "无真实 thinking 块的 assistant 消息补空 reasoning_content",
 			input: `{
 				"model": "mimo-v2.5-pro",
 				"messages": [
@@ -217,7 +218,7 @@ func TestConvertThinkingToReasoningContent(t *testing.T) {
 			},
 		},
 		{
-			name: "历史占位 thinking 块会被移除并补顶层 reasoning_content",
+			name: "历史占位 thinking 块会被移除并补空 reasoning_content",
 			input: `{
 				"model": "mimo-v2.5-pro",
 				"messages": [
@@ -243,7 +244,7 @@ func TestConvertThinkingToReasoningContent(t *testing.T) {
 			},
 		},
 		{
-			name: "只有历史占位 thinking 的 assistant 消息补顶层 reasoning_content 并转为非空 text",
+			name: "只有历史占位 thinking 的 assistant 消息补空 reasoning_content 并转为非空 text",
 			input: `{
 				"model": "mimo-v2.5-pro",
 				"messages": [
@@ -266,6 +267,175 @@ func TestConvertThinkingToReasoningContent(t *testing.T) {
 						},
 					},
 					map[string]interface{}{"role": "user", "content": []interface{}{map[string]interface{}{"type": "text", "text": "next"}}},
+				},
+			},
+		},
+		{
+			name: "assistant string content 补空 reasoning_content",
+			input: `{
+				"model": "mimo-v2.5-pro",
+				"messages": [
+					{"role": "assistant", "content": "plain answer"}
+				]
+			}`,
+			wantJSON: map[string]interface{}{
+				"model": "mimo-v2.5-pro",
+				"messages": []interface{}{
+					map[string]interface{}{
+						"role":              "assistant",
+						"reasoning_content": legacyThinkingPlaceholder,
+						"content":           "plain answer",
+					},
+				},
+			},
+		},
+		{
+			name: "thinking block type 带空白仍会被识别",
+			input: `{
+				"model": "mimo-v2.5-pro",
+				"messages": [
+					{"role": "assistant", "content": [
+						{"type": " thinking ", "thinking": "  nested reasoning  "},
+						{"type": "text", "text": "answer"}
+					]}
+				]
+			}`,
+			wantJSON: map[string]interface{}{
+				"model": "mimo-v2.5-pro",
+				"messages": []interface{}{
+					map[string]interface{}{
+						"role":              "assistant",
+						"reasoning_content": "  nested reasoning  ",
+						"content": []interface{}{
+							map[string]interface{}{"type": " thinking ", "thinking": "  nested reasoning  "},
+							map[string]interface{}{"type": "text", "text": "answer"},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "content block 内 reasoning_content 会提升到顶层",
+			input: `{
+				"model": "mimo-v2.5-pro",
+				"messages": [
+					{"role": "assistant", "content": [
+						{"type": "text", "reasoning_content": "block reasoning", "text": "answer"}
+					]}
+				]
+			}`,
+			wantJSON: map[string]interface{}{
+				"model": "mimo-v2.5-pro",
+				"messages": []interface{}{
+					map[string]interface{}{
+						"role":              "assistant",
+						"reasoning_content": "block reasoning",
+						"content": []interface{}{
+							map[string]interface{}{"type": "text", "text": "answer"},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "assistant 缺失 content 补空 reasoning_content",
+			input: `{
+				"model": "mimo-v2.5-pro",
+				"messages": [
+					{"role": "assistant"}
+				]
+			}`,
+			wantJSON: map[string]interface{}{
+				"model": "mimo-v2.5-pro",
+				"messages": []interface{}{
+					map[string]interface{}{
+						"role":              "assistant",
+						"reasoning_content": legacyThinkingPlaceholder,
+					},
+				},
+			},
+		},
+		{
+			name: "assistant 空 content 数组补空 reasoning_content 并转为非空 text",
+			input: `{
+				"model": "mimo-v2.5-pro",
+				"messages": [
+					{"role": "assistant", "content": []}
+				]
+			}`,
+			wantJSON: map[string]interface{}{
+				"model": "mimo-v2.5-pro",
+				"messages": []interface{}{
+					map[string]interface{}{
+						"role":              "assistant",
+						"reasoning_content": legacyThinkingPlaceholder,
+						"content": []interface{}{
+							map[string]interface{}{"type": "text", "text": missingAssistantResponseText},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "已有顶层 reasoning_content 的 assistant string content 保持原值",
+			input: `{"model": "mimo-v2.5-pro", "messages": [{"role": "assistant", "reasoning_content": "prior reasoning", "content": "plain answer"}]}`,
+			wantJSON: map[string]interface{}{
+				"model": "mimo-v2.5-pro",
+				"messages": []interface{}{
+					map[string]interface{}{
+						"role":              "assistant",
+						"reasoning_content": "prior reasoning",
+						"content":           "plain answer",
+					},
+				},
+			},
+		},
+		{
+			name: "assistant 仅 tool_use 且无 thinking 时补非空 reasoning_content",
+			input: `{"model": "mimo-v2.5-pro", "messages": [{"role": "assistant", "content": [{"type": "tool_use", "id": "call_x", "name": "Edit", "input": {"file_path": "a.go"}}]}]}`,
+			wantJSON: map[string]interface{}{
+				"model": "mimo-v2.5-pro",
+				"messages": []interface{}{
+					map[string]interface{}{
+						"role":              "assistant",
+						"reasoning_content": legacyThinkingPlaceholder,
+						"content": []interface{}{
+							map[string]interface{}{"type": "tool_use", "id": "call_x", "name": "Edit", "input": map[string]interface{}{"file_path": "a.go"}},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "assistant 顶层 reasoning_content 为空串时回填占位",
+			input: `{"model": "mimo-v2.5-pro", "messages": [{"role": "assistant", "reasoning_content": "", "content": [{"type": "tool_use", "id": "call_y", "name": "Edit", "input": {"file_path": "b.go"}}]}]}`,
+			wantJSON: map[string]interface{}{
+				"model": "mimo-v2.5-pro",
+				"messages": []interface{}{
+					map[string]interface{}{
+						"role":              "assistant",
+						"reasoning_content": legacyThinkingPlaceholder,
+						"content": []interface{}{
+							map[string]interface{}{"type": "tool_use", "id": "call_y", "name": "Edit", "input": map[string]interface{}{"file_path": "b.go"}},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "已有顶层 reasoning_content 时不覆盖原值",
+			input: `{"model": "mimo-v2.5-pro", "messages": [{"role": "assistant", "reasoning_content": "exact-passthrough", "content": [{"type": "thinking", "thinking": "new thinking that should not override"}, {"type": "text", "text": "plain answer"}]}]}`,
+			wantJSON: map[string]interface{}{
+				"model": "mimo-v2.5-pro",
+				"messages": []interface{}{
+					map[string]interface{}{
+						"role":              "assistant",
+						"reasoning_content": "exact-passthrough",
+						"content": []interface{}{
+							map[string]interface{}{"type": "thinking", "thinking": "new thinking that should not override"},
+							map[string]interface{}{"type": "text", "text": "plain answer"},
+						},
+					},
 				},
 			},
 		},
@@ -509,3 +679,4 @@ done:
 		t.Errorf("reasoning_content should be removed from stream, got: %s", joined)
 	}
 }
+

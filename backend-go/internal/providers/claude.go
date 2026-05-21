@@ -56,9 +56,9 @@ const (
 
 // convertThinkingToReasoningContent 将真实 thinking 回传为 reasoning_content，并清理历史版本注入的占位 thinking。
 //
-// MiMo 的要求是：开启 thinking mode 后，assistant 历史消息都要带顶层 reasoning_content。
-// 有真实 thinking 时原样回传；没有真实 thinking 时只补顶层占位，不能伪造 content thinking 块。
-// 否则 MiMo 可能把正式回答续写进这个假 thinking 块，导致下游只收到 thinking 而没有 text content block。
+// 开启 thinking mode 的上游要求 assistant 历史都带顶层 reasoning_content：
+// - 有真实 thinking/reasoning 时按原样回传；
+// - 缺少真实 reasoning 时补非空占位（避免部分上游将空串视为“未回传”）。
 //
 // 注：函数名保留以维持向后兼容。
 func convertThinkingToReasoningContent(bodyBytes []byte) []byte {
@@ -89,13 +89,18 @@ func convertThinkingToReasoningContent(bodyBytes []byte) []byte {
 			continue
 		}
 
-		content, ok := msgMap["content"].([]interface{})
-		if !ok {
+		content, hasContentArray := msgMap["content"].([]interface{})
+		if !hasContentArray {
+			modified = true
+			if _, exists := msgMap["reasoning_content"]; !exists {
+				msgMap["reasoning_content"] = legacyThinkingPlaceholder
+			}
 			filteredMessages = append(filteredMessages, msgMap)
 			continue
 		}
 
 		filteredContent := make([]interface{}, 0, len(content))
+		contentModified := false
 		reasoningParts := make([]string, 0, 1)
 		for _, block := range content {
 			blockMap, ok := block.(map[string]interface{})
@@ -105,40 +110,57 @@ func convertThinkingToReasoningContent(bodyBytes []byte) []byte {
 			}
 
 			blockType, _ := blockMap["type"].(string)
+			blockType = strings.TrimSpace(blockType)
 			thinking, _ := blockMap["thinking"].(string)
+			trimmedThinking := strings.TrimSpace(thinking)
 			if blockType == "thinking" {
-				modified = true
-				if thinking == legacyThinkingPlaceholder {
+				// 历史占位/空 thinking 会污染回传语义，直接剔除。
+				if trimmedThinking == "" || trimmedThinking == legacyThinkingPlaceholder {
+					modified = true
+					contentModified = true
 					continue
 				}
-				if strings.TrimSpace(thinking) != "" {
-					reasoningParts = append(reasoningParts, thinking)
-				}
+				// 为兼容上游思考回传校验，保留原始 thinking 文本，不做 trim 改写。
+				reasoningParts = append(reasoningParts, thinking)
+				// 保留真实 thinking block，避免部分上游按历史内容做一致性校验时报错。
+				filteredContent = append(filteredContent, blockMap)
 				continue
+			}
+			reasoning, reasoningExists := blockMap["reasoning_content"].(string)
+			if reasoningExists {
+				trimmedReasoning := strings.TrimSpace(reasoning)
+				if trimmedReasoning != "" && trimmedReasoning != legacyThinkingPlaceholder {
+					reasoningParts = append(reasoningParts, reasoning)
+				}
+				delete(blockMap, "reasoning_content")
+				modified = true
+				contentModified = true
 			}
 
 			filteredContent = append(filteredContent, blockMap)
 		}
 
-		if len(reasoningParts) > 0 {
-			existing, _ := msgMap["reasoning_content"].(string)
-			if strings.TrimSpace(existing) != "" {
-				msgMap["reasoning_content"] = existing + "\n" + strings.Join(reasoningParts, "\n")
-			} else {
-				msgMap["reasoning_content"] = strings.Join(reasoningParts, "\n")
-			}
-		} else if existing, _ := msgMap["reasoning_content"].(string); strings.TrimSpace(existing) == "" {
-			msgMap["reasoning_content"] = legacyThinkingPlaceholder
+		existing, hasExisting := msgMap["reasoning_content"].(string)
+		switch {
+		case strings.TrimSpace(existing) != "":
+			// 已有顶层 reasoning_content 时保持原样，避免改写导致上游回传校验失败。
+		case len(reasoningParts) > 0:
+			msgMap["reasoning_content"] = strings.Join(reasoningParts, "")
 			modified = true
+		case !hasExisting || strings.TrimSpace(existing) == "":
+			modified = true
+			msgMap["reasoning_content"] = legacyThinkingPlaceholder
 		}
 
-		if len(filteredContent) != len(content) {
-			if len(filteredContent) == 0 {
-				filteredContent = []interface{}{map[string]interface{}{
-					"type": "text",
-					"text": missingAssistantResponseText,
-				}}
-			}
+		if len(filteredContent) == 0 {
+			modified = true
+			contentModified = true
+			filteredContent = []interface{}{map[string]interface{}{
+				"type": "text",
+				"text": missingAssistantResponseText,
+			}}
+		}
+		if contentModified {
 			msgMap["content"] = filteredContent
 		}
 		filteredMessages = append(filteredMessages, msgMap)
@@ -348,8 +370,6 @@ func (p *ClaudeProvider) ConvertToProviderRequest(c *gin.Context, upstream *conf
 		bodyBytes = redirectModelInBody(bodyBytes, upstream)
 	}
 
-	// 为缺少 thinking 块的 assistant 消息注入占位 thinking 块
-	// （兼容 mimo 等开启 thinking mode 的 Claude 协议上游，避免历史无 thinking 块时返回 400）
 	if upstream.PassbackReasoningContent {
 		bodyBytes = convertThinkingToReasoningContent(bodyBytes)
 	}
