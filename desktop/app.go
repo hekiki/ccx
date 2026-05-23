@@ -14,9 +14,9 @@ import (
 	"time"
 
 	"github.com/BenedictKing/ccx/desktop/internal/backend"
-	"github.com/BenedictKing/ccx/desktop/internal/editor"
 	"github.com/BenedictKing/ccx/desktop/internal/channelpreset"
 	"github.com/BenedictKing/ccx/desktop/internal/configservice"
+	"github.com/BenedictKing/ccx/desktop/internal/editor"
 	"github.com/BenedictKing/ccx/desktop/internal/updater"
 	"github.com/pkg/browser"
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -355,14 +355,18 @@ func (s *DesktopService) createChannel(ctx context.Context, target string, paylo
 
 func parseEnvContent(content string) map[string]string {
 	values := map[string]string{}
-	for _, line := range strings.Split(content, "\n") {
+	for _, line := range strings.Split(strings.ReplaceAll(content, "\r\n", "\n"), "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "#") || !strings.Contains(line, "=") {
 			continue
 		}
-		parts := strings.SplitN(line, "=", 2)
-		key := strings.TrimSpace(parts[0])
-		value := strings.Trim(strings.TrimSpace(parts[1]), `"'`)
+		key, value, _ := strings.Cut(line, "=")
+		key = strings.TrimSpace(key)
+		if rest, ok := strings.CutPrefix(key, "export "); ok {
+			key = strings.TrimSpace(rest)
+		}
+		value = strings.TrimSpace(value)
+		value = strings.Trim(value, `"'`)
 		values[key] = value
 	}
 	return values

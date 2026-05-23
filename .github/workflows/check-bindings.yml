@@ -1,0 +1,38 @@
+name: Check Bindings Sync
+
+on:
+  pull_request:
+    paths:
+      - 'desktop/**/*.go'
+      - 'desktop/go.mod'
+      - 'desktop/go.sum'
+
+jobs:
+  check-bindings:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.x"
+          cache-dependency-path: desktop/go.sum
+
+      - name: Install Wails3 CLI
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha.92
+
+      - name: Generate bindings
+        working-directory: ./desktop
+        run: |
+          go mod tidy
+          wails3 generate bindings -clean=true -ts
+
+      - name: Check for uncommitted changes
+        run: |
+          if [ -n "$(git status --porcelain desktop/frontend/bindings/)" ]; then
+            echo "::error::Bindings are out of date. Run 'wails3 generate bindings -clean=true -ts' in desktop/ and commit the result."
+            git diff --stat desktop/frontend/bindings/
+            exit 1
+          fi

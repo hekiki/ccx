@@ -449,9 +449,98 @@ jobs:
             checksums-linux.txt
             checksums-linux.txt.sigstore.json
 
+  build-linux-arm64-desktop:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('frontend/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Build Frontend
+        run: bun install --frozen-lockfile && bun run build
+        working-directory: ./frontend
+
+      - name: Copy Frontend to Backend
+        run: |
+          rm -rf backend-go/frontend/dist
+          mkdir -p backend-go/frontend/dist
+          cp -r frontend/dist/* backend-go/frontend/dist/
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.x"
+          cache-dependency-path: backend-go/go.sum
+
+      - name: Build Backend arm64
+        run: |
+          go mod download
+          CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=${{ github.ref_name }} -X main.BuildTime=$(date -u '+%Y-%m-%d_%H:%M:%S') -X main.GitCommit=${{ github.sha }}" -o ccx-linux-arm64
+        working-directory: ./backend-go
+
+      - name: Install Wails3 build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev pkg-config build-essential libfuse2
+
+      - name: Install Wails3 CLI
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha.92
+
+      - name: Install Desktop Frontend Deps
+        run: bun install --frozen-lockfile
+        working-directory: ./desktop/frontend
+
+      - name: Build Desktop arm64 AppImage
+        env:
+          BUILD_VERSION: ${{ github.ref_name }}
+          GIT_COMMIT: ${{ github.sha }}
+        run: |
+          cp ../backend-go/ccx-linux-arm64 bin/ccx-go
+          BUILD_TIME=$(date -u '+%Y-%m-%d_%H:%M:%S')
+          VERSION="${BUILD_VERSION#v}"
+          wails3 task linux:create:appimage ARCH=arm64 BUILD_VERSION="${VERSION}" BUILD_TIME="${BUILD_TIME}" GIT_COMMIT="${GIT_COMMIT}"
+          APPIMAGE=$(find bin -maxdepth 1 -iname '*.AppImage' | head -1)
+          mv "$APPIMAGE" "bin/CCX-Desktop-${VERSION}-linux-arm64.AppImage"
+          sha256sum "bin/CCX-Desktop-${VERSION}-linux-arm64.AppImage" | awk '{print $1}' > "bin/CCX-Desktop-${VERSION}-linux-arm64.AppImage.sha256"
+        working-directory: ./desktop
+
+      - name: Generate Linux arm64 checksums
+        run: |
+          sha256sum desktop/bin/CCX-Desktop-*-linux-arm64.AppImage > checksums-linux-arm64.txt
+
+      - name: Upload Linux arm64 checksums artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: checksums-linux-arm64
+          path: checksums-linux-arm64.txt
+
+      - name: Upload Linux arm64 Assets
+        uses: softprops/action-gh-release@v2.0.5
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            desktop/bin/CCX-Desktop-*-linux-arm64.AppImage
+            desktop/bin/CCX-Desktop-*-linux-arm64.AppImage.sha256
+          draft: true
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   finalize:
     runs-on: ubuntu-latest
-    needs: [build-macos, build-windows, build-linux]
+    needs: [build-macos, build-windows, build-linux, build-linux-arm64-desktop]
     permissions:
       contents: write
       id-token: write
@@ -470,7 +559,8 @@ jobs:
         run: |
           cat signing/checksums-macos.txt \
               signing/checksums-windows.txt \
-              signing/checksums-linux.txt > checksums.txt
+              signing/checksums-linux.txt \
+              signing/checksums-linux-arm64.txt > checksums.txt
           cosign sign-blob checksums.txt \
             --bundle checksums.txt.sigstore.json \
             --yes

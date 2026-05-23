@@ -834,6 +834,9 @@ func extractCodexProviderBlock(content string) string {
 	return block
 }
 
+// extractTopLevelTomlString 从 TOML 内容中提取顶层字符串值。
+// 注意：仅适用于简单格式（key = "value"），不支持多行字符串、转义引号或 inline table。
+// 当前仅用于 Codex config.toml 的 model_provider 字段，该字段始终为简单字符串。
 func extractTopLevelTomlString(content string, key string) (string, bool) {
 	re := regexp.MustCompile(`(?m)^\s*` + regexp.QuoteMeta(key) + `\s*=\s*"([^"]*)"\s*(?:#.*)?$`)
 	match := re.FindStringSubmatch(content)
@@ -852,6 +855,9 @@ func extractTomlStringField(content string, key string) (string, bool) {
 	return match[1], true
 }
 
+// findNamedTomlBlock 返回 [table] 块的起止偏移量。
+// 注意：仅支持标准 [table] 格式，不支持带引号的 key（如 [providers."ccx"]）或 inline table。
+// 当前仅用于 Codex config.toml 的 [model_providers.ccx] 块。
 func findNamedTomlBlock(content string, table string) (int, int, bool) {
 	header := "[" + table + "]"
 	for lineStart := 0; lineStart < len(content); {

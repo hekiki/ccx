@@ -157,9 +157,6 @@ func (u *Updater) Check(ctx context.Context) (*Release, error) {
 	}
 
 	assetName := PlatformAssetName(latest)
-	if runtime.GOOS == "linux" && runtime.GOARCH != "amd64" {
-		return nil, fmt.Errorf("Linux %s 暂不支持桌面端自动更新，请手动下载对应安装包", runtime.GOARCH)
-	}
 	var downloadURL, sha256URL string
 	var size int64
 	for _, a := range ghRelease.Assets {

@@ -1,0 +1,11 @@
+{
+  "info": {
+    "companyName": "CCX",
+    "productName": "CCX Desktop",
+    "productIdentifier": "com.ccx.gateway.desktop",
+    "description": "Desktop shell for the CCX core gateway service.",
+    "copyright": "(c) 2026, CCX",
+    "comments": "CCX desktop service supervisor",
+    "version": "1.0.0"
+  }
+}

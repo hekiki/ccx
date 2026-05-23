@@ -1,6 +1,9 @@
 ## [Unreleased]
 
 ### 新增
+- **Linux ARM64 桌面端支持**：CI 新增 `ubuntu-24.04-arm` runner 构建 arm64 AppImage，updater 移除 arm64 限制。
+- **前端测试框架**：引入 vitest + jsdom，新增 `env-file.ts` 20 个单元测试。
+- **Bindings 同步 CI 守护**：新增 `check-bindings.yml` workflow，PR 修改 Go 接口时自动验证 TypeScript bindings 同步。
 - **桌面端 .env 文件外部编辑器打开**：Env 配置页新增"用编辑器打开"按钮，自动检测系统已安装的编辑器（VS Code、Cursor、Sublime Text、Vim 等），支持 `$EDITOR` / `$VISUAL` 环境变量优先。多个编辑器时提供下拉选择。
 
 - **Desktop 内置 ccx-go 后端**：macOS .app、Windows NSIS、Linux AppImage/deb/rpm 安装包现在内置 ccx-go 后端二进制，用户无需单独下载。Desktop 与 ccx-go 共用版本号。
@@ -16,7 +19,8 @@
 - **补齐桌面端测试覆盖**：新增 `configservice`（19 个纯函数 + 集成测试）和 `backend/manager`（16 个测试）测试文件。
 
 ### 修复
-
+- **MSIX 打包缺少 wails.json**：新建 `desktop/wails.json`，修复 `wails3 tool msix --config` 引用不存在的文件。
+- **parseEnvContent 兼容性**：Go 端 `.env` 解析支持 `export` 前缀和 `\r\n` 换行符。
 - **桌面端 Agent 配置服务初始化错误日志**：`configservice.New()` 失败时不再静默丢弃错误，改为输出 `[Desktop-Init]` 日志便于排查。
 - **渠道对话框下拉菜单位置偏移**：修复 Vuetify v-select/v-combobox 在添加/编辑渠道对话框内首次打开时菜单位置计算错误的问题，通过 eager 预渲染与 resize 触发确保下拉菜单正确定位。
 - **DeepSeek `user_id` 限速与隔离字段透传**：
