@@ -137,9 +137,9 @@ const canApplyAgent = (platform: AgentPlatform, serviceRunning: boolean) => {
     if (selectedCodexProvider.value === 'openai') {
       return codexOpenAIKey.value.trim() !== '' || !!savedProviderKeys.value['codex:openai']
     }
-    return serviceRunning
+    return true
   }
-  if (selectedClaudeProvider.value === 'ccx') return serviceRunning
+  if (selectedClaudeProvider.value === 'ccx') return true
   const provider = selectedClaudeProvider.value
   const inputKey = claudeProviderKeys.value[provider].trim()
   const hasSaved = !!savedProviderKeys.value[`claude:${provider}`]
