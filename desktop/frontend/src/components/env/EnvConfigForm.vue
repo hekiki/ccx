@@ -385,7 +385,7 @@ onUnmounted(() => {
               <Button type="button" variant="secondary" size="sm" @click="showSecret[field.key] = !showSecret[field.key]">
                 {{ showSecret[field.key] ? '隐藏' : '显示' }}
               </Button>
-              <Button type="button" variant="outline" size="sm" @click="copyToClipboard(field.key)">
+              <Button v-if="form[field.key]" type="button" variant="outline" size="sm" @click="copyToClipboard(field.key)">
                 {{ copiedKey === field.key ? '已复制' : '复制' }}
               </Button>
             </div>
