@@ -138,7 +138,7 @@ jobs:
           COSIGN_YES: "true"
 
       - name: Upload macOS Assets
-        uses: softprops/action-gh-release@v2.0.5
+        uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
@@ -154,8 +154,7 @@ jobs:
             checksums-macos.txt.sigstore.json
           draft: true
           generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   build-windows:
     runs-on: windows-latest
@@ -313,7 +312,7 @@ jobs:
           COSIGN_YES: "true"
 
       - name: Upload Windows Assets
-        uses: softprops/action-gh-release@v2.0.5
+        uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
@@ -329,8 +328,7 @@ jobs:
             checksums-windows.txt.sigstore.json
           draft: true
           generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   build-linux:
     runs-on: ubuntu-latest
@@ -429,7 +427,7 @@ jobs:
           COSIGN_YES: "true"
 
       - name: Upload Linux Assets
-        uses: softprops/action-gh-release@v2.0.5
+        uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
@@ -443,8 +441,7 @@ jobs:
             checksums-linux.txt.sigstore.json
           draft: true
           generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   build-linux-arm64-desktop:
     runs-on: ubuntu-24.04-arm
@@ -520,7 +517,7 @@ jobs:
           sha256sum CCX-Desktop-*-linux-arm64.AppImage > checksums-linux-arm64.txt
 
       - name: Upload Linux arm64 Assets
-        uses: softprops/action-gh-release@v2.0.5
+        uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
@@ -528,8 +525,7 @@ jobs:
             desktop/bin/CCX-Desktop-*-linux-arm64.AppImage.sha256
           draft: true
           generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   finalize:
     runs-on: ubuntu-latest
