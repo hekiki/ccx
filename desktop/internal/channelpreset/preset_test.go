@@ -7,17 +7,17 @@ import (
 
 func TestBuildPayload(t *testing.T) {
 	tests := []struct {
-		name           string
-		req            CreateChannelRequest
-		wantTarget     string
-		wantBaseURL    string
-		wantService    string
-		wantVision     bool
-		wantPassback   bool
-		wantCodex      bool
-		wantModels     []string
-		wantModelMap   bool
-		wantFallback   string
+		name         string
+		req          CreateChannelRequest
+		wantTarget   string
+		wantBaseURL  string
+		wantService  string
+		wantVision   bool
+		wantPassback bool
+		wantCodex    bool
+		wantModels   []string
+		wantModelMap bool
+		wantFallback string
 	}{
 		{
 			name:        "deepseek messages (anthropic endpoint)",
@@ -52,20 +52,20 @@ func TestBuildPayload(t *testing.T) {
 			wantFallback: "MiMo-V2.5",
 		},
 		{
-			name:        "mimo chat",
-			req:         CreateChannelRequest{Provider: ProviderMiMo, Target: TargetChat, APIKey: "tp-test"},
-			wantBaseURL: "https://api.mimo.xiaomi.com/v1",
-			wantService: "openai",
-			wantModels:  []string{"mimo-v2.5-pro", "MiMo-V2.5"},
+			name:         "mimo chat",
+			req:          CreateChannelRequest{Provider: ProviderMiMo, Target: TargetChat, APIKey: "tp-test"},
+			wantBaseURL:  "https://api.mimo.xiaomi.com/v1",
+			wantService:  "openai",
+			wantModels:   []string{"mimo-v2.5-pro", "MiMo-V2.5"},
 			wantFallback: "MiMo-V2.5",
 		},
 		{
-			name:        "mimo responses",
-			req:         CreateChannelRequest{Provider: ProviderMiMo, Target: TargetResponses, APIKey: "tp-test"},
-			wantBaseURL: "https://api.mimo.xiaomi.com/v1",
-			wantService: "openai",
-			wantCodex:   true,
-			wantModels:  []string{"mimo-v2.5-pro", "MiMo-V2.5"},
+			name:         "mimo responses",
+			req:          CreateChannelRequest{Provider: ProviderMiMo, Target: TargetResponses, APIKey: "tp-test"},
+			wantBaseURL:  "https://api.mimo.xiaomi.com/v1",
+			wantService:  "openai",
+			wantCodex:    true,
+			wantModels:   []string{"mimo-v2.5-pro", "MiMo-V2.5"},
 			wantFallback: "MiMo-V2.5",
 		},
 		{

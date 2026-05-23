@@ -55,7 +55,10 @@ type EnvFileState struct {
 }
 
 func NewDesktopService(manager *backend.Manager) *DesktopService {
-	configService, _ := configservice.New(manager.DataDir())
+	configService, err := configservice.New(manager.DataDir())
+	if err != nil {
+		log.Printf("[Desktop-Init] Agent 配置服务初始化失败: %v", err)
+	}
 	return &DesktopService{manager: manager, configService: configService}
 }
 

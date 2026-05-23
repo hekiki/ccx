@@ -242,7 +242,6 @@ func BuildPayload(req CreateChannelRequest) (ChannelPayload, error) {
 // messages target 使用 Anthropic 协议，需要 anthropic 路径；
 // chat/responses target 使用 OpenAI 协议，不应使用 anthropic 路径。
 
-
 // bestPlanForTarget 根据 target 自动选择最合适的 plan。
 // 当 provider 有多个 plan（如 DeepSeek 的 /anthropic 和 /v1）时，
 // 确保 chat/responses 选择 OpenAI-compatible 入口，messages 选择 Anthropic 入口。
