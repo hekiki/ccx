@@ -840,7 +840,7 @@ func resolveClaudeProvider(req ApplyAgentConfigRequest, port int, accessKey stri
 		if baseURL == "" {
 			baseURL = deepSeekClaudeBaseURL
 		}
-		return baseURL, "", apiKey, nil
+		return baseURL, apiKey, "", nil
 	case ProviderMiMo:
 		apiKey := strings.TrimSpace(req.APIKey)
 		if apiKey == "" {
@@ -850,7 +850,7 @@ func resolveClaudeProvider(req ApplyAgentConfigRequest, port int, accessKey stri
 		if baseURL == "" {
 			baseURL = defaultMiMoBaseURL
 		}
-		return baseURL, "", apiKey, nil
+		return baseURL, apiKey, "", nil
 	case ProviderKimi:
 		apiKey := strings.TrimSpace(req.APIKey)
 		if apiKey == "" {
@@ -860,7 +860,7 @@ func resolveClaudeProvider(req ApplyAgentConfigRequest, port int, accessKey stri
 		if baseURL == "" {
 			baseURL = kimiClaudeBaseURL
 		}
-		return baseURL, "", apiKey, nil
+		return baseURL, apiKey, "", nil
 	case ProviderGLM:
 		apiKey := strings.TrimSpace(req.APIKey)
 		if apiKey == "" {
@@ -870,7 +870,7 @@ func resolveClaudeProvider(req ApplyAgentConfigRequest, port int, accessKey stri
 		if baseURL == "" {
 			baseURL = glmClaudeBaseURL
 		}
-		return baseURL, "", apiKey, nil
+		return baseURL, apiKey, "", nil
 	case ProviderMiniMax:
 		apiKey := strings.TrimSpace(req.APIKey)
 		if apiKey == "" {
@@ -880,7 +880,7 @@ func resolveClaudeProvider(req ApplyAgentConfigRequest, port int, accessKey stri
 		if baseURL == "" {
 			baseURL = miniMaxClaudeBaseURL
 		}
-		return baseURL, "", apiKey, nil
+		return baseURL, apiKey, "", nil
 	case ProviderDashScope:
 		apiKey := strings.TrimSpace(req.APIKey)
 		if apiKey == "" {
@@ -890,19 +890,19 @@ func resolveClaudeProvider(req ApplyAgentConfigRequest, port int, accessKey stri
 		if baseURL == "" {
 			baseURL = dashScopeClaudeBaseURL
 		}
-		return baseURL, "", apiKey, nil
+		return baseURL, apiKey, "", nil
 	case ProviderOpenCodeZen:
 		apiKey := strings.TrimSpace(req.APIKey)
 		if apiKey == "" {
 			return "", "", "", fmt.Errorf("OpenCode Zen API Key 不能为空")
 		}
-		return openCodeZenClaudeBaseURL, "", apiKey, nil
+		return openCodeZenClaudeBaseURL, apiKey, "", nil
 	case ProviderOpenCodeGo:
 		apiKey := strings.TrimSpace(req.APIKey)
 		if apiKey == "" {
 			return "", "", "", fmt.Errorf("OpenCode Go API Key 不能为空")
 		}
-		return openCodeGoClaudeBaseURL, "", apiKey, nil
+		return openCodeGoClaudeBaseURL, apiKey, "", nil
 	default:
 		return "", "", "", fmt.Errorf("不支持的 Claude Code provider: %s", provider)
 	}
