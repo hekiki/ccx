@@ -591,6 +591,8 @@ func (s *Service) applyCodexThirdParty(provider, baseURL, apiKey string) error {
 name = %q
 base_url = %q
 wire_api = "responses"
+temp_env_key = "OPENAI_API_KEY"
+requires_openai_auth = false
 `, provider, provider, baseURL)
 	updated := upsertTopLevelTomlString(configContent, "model_provider", provider)
 	updated = restoreNamedTomlBlock(updated, "model_providers.ccx", nil)
@@ -1393,6 +1395,8 @@ func (s *Service) previewApplyCodexThirdParty(provider, baseURL, apiKey string) 
 name = %q
 base_url = %q
 wire_api = "responses"
+temp_env_key = "OPENAI_API_KEY"
+requires_openai_auth = false
 `, provider, provider, baseURL)
 
 	updatedConfig := upsertTopLevelTomlString(configContent, "model_provider", provider)
