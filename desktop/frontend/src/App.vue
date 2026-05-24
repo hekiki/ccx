@@ -10,6 +10,7 @@ import UpdateDialog from '@/components/update/UpdateDialog.vue'
 import { useStatus } from '@/composables/useStatus'
 import { useUpdater } from '@/composables/useUpdater'
 import { useWailsEvents } from '@/composables/useWailsEvents'
+import { RefreshCw } from 'lucide-vue-next'
 
 import type { TabValue } from '@/types'
 
@@ -22,6 +23,9 @@ useWailsEvents(activeTab, actionError, syncStatus)
 const switchToWeb = () => {
   activeTab.value = 'web'
 }
+
+const webTabRef = ref<InstanceType<typeof WebUITab> | null>(null)
+const refreshWebUI = () => webTabRef.value?.refreshIframe()
 
 // 选项卡标题映射
 const tabTitles: Record<TabValue, string> = {
@@ -49,6 +53,14 @@ const tabTitles: Record<TabValue, string> = {
           <h2 class="text-sm font-bold text-slate-200 tracking-wide uppercase">
             {{ tabTitles[activeTab] }}
           </h2>
+          <button
+            v-if="activeTab === 'web'"
+            class="text-slate-400 hover:text-slate-200 transition-colors p-1 rounded hover:bg-slate-800/50"
+            title="刷新 Web UI"
+            @click="refreshWebUI"
+          >
+            <RefreshCw class="w-3.5 h-3.5" />
+          </button>
         </div>
 
         <div class="flex items-center gap-2">
@@ -91,7 +103,7 @@ const tabTitles: Record<TabValue, string> = {
             <EnvTab />
           </div>
           <div v-show="activeTab === 'web'" class="h-full">
-            <WebUITab :status="status" :loading="false" />
+            <WebUITab ref="webTabRef" :status="status" :loading="false" />
           </div>
         </div>
       </div>
