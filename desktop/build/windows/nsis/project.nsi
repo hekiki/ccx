@@ -19,14 +19,14 @@ Unicode true
 ####
 ## The following information is taken from the wails_tools.nsh file, but they can be overwritten here.
 ####
-## !define INFO_PROJECTNAME    "my-project" # Default "ccx-desktop"
-## !define INFO_COMPANYNAME    "My Company" # Default "My Company"
-## !define INFO_PRODUCTNAME    "My Product Name" # Default "My Product"
-## !define INFO_PRODUCTVERSION "1.0.0"     # Default "0.1.0"
-## !define INFO_COPYRIGHT      "(c) Now, My Company" # Default "© now, My Company"
+!define INFO_PROJECTNAME    "ccx-desktop"
+!define INFO_COMPANYNAME    "CCX"
+!define INFO_PRODUCTNAME    "CCX Desktop"
+!define INFO_PRODUCTVERSION "0.1.0"
+!define INFO_COPYRIGHT      "© 2026, CCX"
 ###
-## !define PRODUCT_EXECUTABLE  "Application.exe"      # Default "${INFO_PROJECTNAME}.exe"
-## !define UNINST_KEY_NAME     "UninstKeyInRegistry"  # Default "${INFO_COMPANYNAME}${INFO_PRODUCTNAME}"
+!define PRODUCT_EXECUTABLE  "ccx-desktop.exe"
+!define UNINST_KEY_NAME     "CCXDesktop"
 ####
 ## !define REQUEST_EXECUTION_LEVEL "admin"            # Default "admin"  see also https://nsis.sourceforge.io/Docs/Chapter4.html
 ####
