@@ -403,6 +403,7 @@ func applyTargetDefaults(payload *ChannelPayload, provider string, target string
 				"opus":   "MiniMax-M2.7",
 				"sonnet": "MiniMax-M2.7",
 			}
+			payload.PassbackReasoningContent = true
 		}
 	case TargetChat:
 		payload.ServiceType = "openai"
@@ -451,6 +452,9 @@ func applyTargetDefaults(payload *ChannelPayload, provider string, target string
 		case ProviderGLM:
 		case ProviderMiniMax:
 			payload.ModelMapping = map[string]string{"gpt": "MiniMax-M2.7"}
+			payload.CodexToolCompat = false
+			payload.StripCodexClientTools = false
+			payload.CodexNativeToolPassthrough = true
 		}
 	}
 }
