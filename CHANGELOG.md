@@ -1,3 +1,14 @@
+## [v2.7.27] - 2026-05-24
+
+### 新增
+
+- **Codex 直连新增 DashScope / OpenCode Zen / Go 选项** - 桌面端 Codex 直连配置新增 DashScope、OpenCode Zen 和 OpenCode Go 三个新的 provider 选项
+- **DashScope chat/responses 预设扩展** - DashScope 渠道预设增加 GPT 模型重定向和 reasoning mapping 支持
+
+### 修复
+
+- **Codex 直连目标 URL 显示** - 修复 Codex 直连时目标 URL 未正确显示各 provider 的 Responses 端点的问题
+
 ## [v2.7.26] - 2026-05-24
 
 ### 新增
