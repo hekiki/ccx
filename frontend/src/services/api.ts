@@ -1208,7 +1208,13 @@ export class ApiService {
   }
 
   async pingAllChatChannels(): Promise<Array<{ id: number; name: string; latency: number; status: string }>> {
-    return this.request('/chat/ping')
+    const resp = await this.request('/chat/ping')
+    return (resp.channels || []).map((ch: { index: number; name: string; latency: number; success: boolean }) => ({
+      id: ch.index,
+      name: ch.name,
+      latency: ch.latency,
+      status: ch.success ? 'healthy' : 'error'
+    }))
   }
 
   async getChatChannelModels(id: number, request: ChannelModelsRequest): Promise<ModelsResponse> {

@@ -2,6 +2,9 @@
 
 ### 修复
 
+- **批量延迟测试在 Chat 标签页报错 `e.forEach is not a function`** - 修复 Chat 渠道批量延迟测试时，前端 `pingAllChatChannels()` 未解包后端 `{"channels": [...]}` 响应导致 `forEach` 调用失败的问题
+  - `api.ts` 中 `pingAllChatChannels()` 现在正确提取 `resp.channels` 并映射字段，与 Images/Gemini 处理方式一致
+
 - **第三方 provider 直连使用 ANTHROPIC_AUTH_TOKEN** - 修复桌面端第三方 provider（DeepSeek、MiMo、Kimi、GLM、MiniMax、DashScope、OpenCode）直连 Claude Code 时，API Key 错误写入 `ANTHROPIC_API_KEY` 的问题，改为正确写入 `ANTHROPIC_AUTH_TOKEN`
   - `resolveClaudeProvider` 统一将第三方 provider 的 key 归入 `authToken` 返回值，与 CCX provider 行为一致
   - apply、restore、preview 三条路径均通过同一函数解析，无需额外修改
