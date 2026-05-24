@@ -167,21 +167,22 @@ func Presets() []ProviderPreset {
 		{
 			ID:                  ProviderGLM,
 			Label:               "GLM / BigModel",
-			Description:         "Codex Responses 与 Chat 渠道透传，适合加入 CCX 调度池。",
+			Description:         "Messages 原生透传、Codex Responses、Chat 渠道透传三种用法。",
+			DirectAgent:         true,
+			NativeMessages:      true,
 			ChatCompatible:      true,
 			ResponsesCompatible: true,
-			Plans: []ProviderPlan{{
-				ID:          "openai-chat",
-				Label:       "OpenAI-compatible",
-				BaseURL:     "https://open.bigmodel.cn/api/paas/v4",
-				Description: "智谱 OpenAI 兼容入口",
-				Recommended: true,
-			}},
-			Targets: []ChannelTarget{
-				{Type: TargetResponses, Label: "Codex Responses", Description: "OpenAI Responses 协议，供 Codex 使用"},
-				{Type: TargetChat, Label: "Chat 渠道透传", Description: "OpenAI Chat 协议，供 Chat 客户端使用", Recommended: true},
+			Plans: []ProviderPlan{
+				{ID: "anthropic", Label: "Anthropic-compatible", BaseURL: "https://open.bigmodel.cn/api/anthropic", Description: "Claude Messages 原生入口", Recommended: true},
+				{ID: "coding", Label: "OpenAI-compatible (Coding)", BaseURL: "https://open.bigmodel.cn/api/coding/paas/v4#", Description: "智谱 Coding 套餐入口"},
+				{ID: "openai-chat", Label: "OpenAI-compatible (通用)", BaseURL: "https://open.bigmodel.cn/api/paas/v4#", Description: "智谱通用 OpenAI 兼容入口"},
 			},
-			DefaultTarget: TargetChat,
+			Targets: []ChannelTarget{
+				{Type: TargetMessages, Label: "Messages 原生透传", Description: "Claude Code 直连或 CCX messages 渠道", Recommended: true},
+				{Type: TargetResponses, Label: "Codex Responses", Description: "OpenAI Responses 协议，供 Codex 使用"},
+				{Type: TargetChat, Label: "Chat 渠道透传", Description: "OpenAI Chat 协议，供 Chat 客户端使用"},
+			},
+			DefaultTarget: TargetMessages,
 		},
 		{
 			ID:                  ProviderMiniMax,
@@ -402,6 +403,12 @@ func applyTargetDefaults(payload *ChannelPayload, provider string, target string
 				"haiku":  "kimi-k2.6",
 				"opus":   "kimi-k2.6",
 				"sonnet": "kimi-k2.6",
+			}
+		case ProviderGLM:
+			payload.ModelMapping = map[string]string{
+				"haiku":  "glm-5.1",
+				"opus":   "glm-5.1",
+				"sonnet": "glm-5.1",
 			}
 		case ProviderMiniMax:
 			payload.ModelMapping = map[string]string{
