@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import Sidebar from '@/components/layout/Sidebar.vue'
 import StatusTab from '@/components/status/StatusTab.vue'
 import AgentTab from '@/components/agent/AgentTab.vue'
@@ -26,6 +26,14 @@ const switchToWeb = () => {
 
 const webTabRef = ref<InstanceType<typeof WebUITab> | null>(null)
 const refreshWebUI = () => webTabRef.value?.refreshIframe()
+
+// 切换到 Web UI 标签时自动刷新 iframe，避免 v-show 隐藏状态下浏览器挂起加载导致白屏
+watch(activeTab, async (tab) => {
+  if (tab === 'web') {
+    await nextTick()
+    refreshWebUI()
+  }
+})
 
 // 选项卡标题映射
 const tabTitles: Record<TabValue, string> = {
