@@ -1,7 +1,7 @@
 ---
 name: version-bump
 description: 升级项目版本号并提交git，支持patch/minor/major版本升级或指定具体版本号，自动从git log生成CHANGELOG
-version: 1.3.0
+version: 1.4.0
 author: https://github.com/BenedictKing/ccx/
 allowed-tools: Bash, Read, Write, Edit
 context: fork
@@ -67,63 +67,47 @@ echo "v{新版本号}" > VERSION
 
 **前置检查（必须）：**
 
-1. 读取 CHANGELOG.md，查找 `## [Unreleased]` 区块
-2. 检查该区块下是否有实际变更内容（即 `## [Unreleased]` 与下一个 `## [v` 之间是否存在非空行）
-3. 根据检查结果决定行为：
-
-| 情况 | 行为 |
-|------|------|
-| 有 `[Unreleased]` 且有变更内容 | ✅ 正常替换为新版本号和日期 |
-| 有 `[Unreleased]` 但下方无变更内容 | 进入 **git log 自动生成** 流程 |
-| 无 `[Unreleased]` 区块 | 进入 **git log 自动生成** 流程 |
-
-**git log 自动生成流程：**
-
-当 CHANGELOG 中没有现成的变更内容时，从 git log 自动生成：
-
-1. 获取上一个版本 tag 到 HEAD 的提交记录：
+1. 读取 CHANGELOG.md，查找 `## [Unreleased]` 区块（若不存在则创建）
+2. 获取上一个版本 tag 到 HEAD 的全部提交记录，用于后续校验补全：
    ```bash
    git log v{上一个版本}..HEAD --pretty=format:"%h %s"
    ```
-2. 如果没有提交记录，❌ 中止流程，提示用户没有新的变更
-3. 按 Conventional Commits 的 `type` 将提交分组为 CHANGELOG 分类：
+3. 如果没有提交记录，❌ 中止流程，提示用户没有新的变更
 
-   | type | CHANGELOG 分类 |
-   |------|---------------|
-   | `feat` | 新增 |
-   | `fix` | 修复 |
-   | `perf` | 优化 |
-   | `refactor` | 重构 |
-   | `docs` | 文档 |
-   | `chore`, `ci`, `build` | 其他 |
-   | `revert` | 回滚 |
+**git log 校验与补全（始终执行）：**
 
-4. 为每个提交生成简洁的 CHANGELOG 条目，参考已有 CHANGELOG 条目的风格（含加粗标题和详情描述）
-5. 在 CHANGELOG.md 顶部插入新版本区块（在第一个 `## [v` 之前）：
-   ```markdown
-   ## [v{新版本号}] - YYYY-MM-DD
+无论 `[Unreleased]` 是否已有内容，**都必须**用 git log 逐条校验，确保每个提交都已在 CHANGELOG 中有对应条目：
 
-   ### 新增
+1. 解析 `[Unreleased]` 区块中已有的条目（按标题摘要匹配）
+2. 将 git log 中的每个 commit subject 与已有条目逐一比对
+3. 找出所有**尚未记录**的提交，分为两类：
+   - **根本不存在**：CHANGELOG 中完全没有该提交的条目 → 直接生成新条目追加到 `[Unreleased]`
+   - **错位到前一个版本下**：在 `## [v{上一个版本}]` 区块中找到了该提交的条目 → **必须将条目从旧版本区块中剪切，移动到 `[Unreleased]` 区块**（保留分类分组，删除原位置）
+4. 追加/移动完毕后，若全部已有记录则无需改动
 
-   - **功能标题** - 简要描述
+> ⚠️ **错位处理必须优先于补全**：先扫描 `[v{上一个版本}]` 区块是否有属于本次 v{新版本} 的提交，有则剪切移动，再对剩余遗漏的提交生成新条目。避免同一个提交在 CHANGELOG 中出现两次。
 
-   ### 修复
+**按 type 分组规则：**
 
-   - **修复标题** - 简要描述
-   ```
-6. 仅保留有内容的分类，跳过空分类
+| type | CHANGELOG 分类 |
+|------|---------------|
+| `feat` | 新增 |
+| `fix` | 修复 |
+| `perf` | 优化 |
+| `refactor` | 重构 |
+| `docs` | 文档 |
+| `chore`, `ci`, `build` | 其他 |
+| `revert` | 回滚 |
 
-**替换规则（有 Unreleased 时）：**
+**替换为新版本号：**
+
+校验补全完成后，将 `## [Unreleased]` 替换为：
 
 ```markdown
-# 替换前
-
-## [Unreleased]
-
-# 替换后
-
 ## [v{新版本号}] - YYYY-MM-DD
 ```
+
+保留下方所有条目内容不变（已包含全部提交）。
 
 ### 5. 验证更新
 
@@ -223,11 +207,13 @@ git push origin v{新版本号}
 
 1. 读取 VERSION: `v2.0.14`
 2. 计算新版本: `v2.0.15`
-3. 更新 VERSION 文件
-4. 执行 git commit
-5. 本地编译验证（`make test` + `make build`）
-6. 创建 git tag: `v2.0.15`
-7. 推送 commit 和 tag 到远程
+3. **从 git log 校验并补全 CHANGELOG** — 将 `v2.0.14..HEAD` 的每个 commit 逐一与 `[Unreleased]` 已有条目比对，遗漏的追加进去
+4. 将 `## [Unreleased]` 替换为 `## [v2.0.15] - YYYY-MM-DD`
+5. 更新 VERSION 文件
+6. 执行 git commit
+7. 本地编译验证（`make test` + `make build`）
+8. 创建 git tag: `v2.0.15`
+9. 推送 commit 和 tag 到远程
 
 ### 场景 2：升级 minor 版本
 
