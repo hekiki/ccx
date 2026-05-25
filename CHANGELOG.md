@@ -1,3 +1,17 @@
+## [v2.8.0] - 2026-05-25
+
+### 修复
+
+- **TestDetectRootDirFallsBackToCwd 在 macOS `/private/var` 符号链接下的误报** - macOS 的 `/var` 是 `/private/var` 的符号链接，`t.TempDir()` 返回前者但 `os.Getwd()` 解析到后者，导致字符串直接比较失败；改用 `filepath.EvalSymlinks` 对齐期望值
+
+### 其他
+
+- **同步 channelpreset 测试期望与当前 preset 实现** - 修复 9 个因测试期望过时导致的失败用例，实现本身正确
+  - 移除对 `SupportedModels` 字段的断言：`preset.go` 从未设置该字段（deepseek_chat 与 mimo 共 4 个用例）
+  - `glm_chat` / `glm_responses` BaseURL 改为 coding plan 的实际值（`https://open.bigmodel.cn/api/coding/paas/v4#`），匹配 `bestPlanForTarget` 按 plan 数组顺序选第一个非 anthropic plan 的行为
+  - `minimax_responses` 的 `CodexToolCompat` / `StripCodexClientTools` 改为 false：`applyTargetDefaults` 显式 override 为 native passthrough 策略，与 DeepSeek 一致
+  - `TestBuildPayloadRejectsUnsupportedTarget` 改用 `invalid-target`：kimi preset 已支持 `NativeMessages`，原 kimi+messages 用例失效
+
 ## [v2.7.31] - 2026-05-25
 
 ### 破坏性变更
