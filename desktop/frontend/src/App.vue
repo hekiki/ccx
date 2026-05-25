@@ -119,7 +119,7 @@ const tabTitles: Record<TabValue, string> = {
         class="flex-1 overflow-y-auto"
         :class="activeTab === 'web' ? 'p-0' : 'px-8 py-7'"
       >
-        <div :class="activeTab === 'web' ? 'h-full' : 'max-w-5xl mx-auto h-full'">
+        <div class="h-full">
           <!-- v-show 常驻缓存各 Tab，切换时保留内部状态与滚动位置 -->
           <div v-show="activeTab === 'status'" class="h-full">
             <StatusTab @switch-to-web="switchToWeb" />
