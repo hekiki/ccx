@@ -140,10 +140,6 @@ const submit = async () => {
             统一把 DeepSeek、MiMo、Kimi、GLM、MiniMax Key 可同时用于 Agent 直连和 CCX 统一渠道池，复杂开关由预设自动处理。
           </p>
         </div>
-        <Button size="sm" variant="secondary" :disabled="loading" @click="loadChannelPresets">
-          <Loader2 v-if="loading" class="w-3.5 h-3.5 mr-1.5 animate-spin" />
-          刷新预设
-        </Button>
       </div>
     </div>
 

@@ -30,7 +30,7 @@ const loadChannelPresets = async (target?: string) => {
   error.value = ''
   try {
     const [nextPresets, nextAssets] = await Promise.all([
-      GetProviderPresets(target || '') as Promise<ProviderPreset[]>,
+      GetProviderPresets(typeof target === 'string' ? target : '') as Promise<ProviderPreset[]>,
       GetProviderKeyAssets() as Promise<ProviderKeyAsset[]>,
     ])
     presets.value = nextPresets
