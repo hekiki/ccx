@@ -71,8 +71,8 @@ jobs:
       - name: Install Wails3 CLI
         run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha.95
 
-      - name: Install DMG packaging dependencies
-        run: pip3 install --user Pillow
+      - name: Install create-dmg
+        run: brew install create-dmg
 
       - name: Install Desktop Frontend Deps
         run: bun install --frozen-lockfile

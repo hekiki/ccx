@@ -146,19 +146,39 @@ tasks:
             ref: .BUILD_VERSION
 
   create:dmg:
-    summary: Creates a DMG with a custom Finder layout and optional background
+    summary: Creates a DMG with a custom Finder layout using create-dmg
     vars:
       DISPLAY_APP_NAME: '{{.DISPLAY_APP_NAME | default "CCX Desktop"}}'
       DMG_WINDOW_SIZE: '{{.DMG_WINDOW_SIZE | default "600,400"}}'
       DMG_APP_POSITION: '{{.DMG_APP_POSITION | default "150,190"}}'
       DMG_APPLICATIONS_POSITION: '{{.DMG_APPLICATIONS_POSITION | default "450,190"}}'
       DMG_APP_ICON_SIZE: '{{.DMG_APP_ICON_SIZE | default 96}}'
-      DMG_APPLICATIONS_ICON_SIZE: '{{.DMG_APPLICATIONS_ICON_SIZE | default 96}}'
       VERSION: '{{.BUILD_VERSION | default "0.0.0"}}'
       DMG_OUTPUT: '{{.BIN_DIR}}/CCX-Desktop-{{.VERSION}}-darwin-{{.ARCH | default ARCH}}.dmg'
     cmds:
       - mv "{{.BIN_DIR}}/{{.APP_NAME}}.app" "{{.BIN_DIR}}/{{.DISPLAY_APP_NAME}}.app" || true
-      - python3 build/darwin/pack_dmg.py --dmg "{{.DMG_OUTPUT}}" --app "{{.BIN_DIR}}/{{.DISPLAY_APP_NAME}}.app" --volume-name "{{.DISPLAY_APP_NAME}}" --volume-icon build/darwin/icons.icns --window-size "{{.DMG_WINDOW_SIZE}}" --app-icon-size {{.DMG_APP_ICON_SIZE}} --applications-icon-size {{.DMG_APPLICATIONS_ICON_SIZE}} --app-position "{{.DMG_APP_POSITION}}" --applications-position "{{.DMG_APPLICATIONS_POSITION}}"
+      - |
+        STAGING=$(mktemp -d)
+        cp -R "{{.BIN_DIR}}/{{.DISPLAY_APP_NAME}}.app" "$STAGING/"
+        APP_X=$(echo "{{.DMG_APP_POSITION}}" | cut -d, -f1)
+        APP_Y=$(echo "{{.DMG_APP_POSITION}}" | cut -d, -f2)
+        LINK_X=$(echo "{{.DMG_APPLICATIONS_POSITION}}" | cut -d, -f1)
+        LINK_Y=$(echo "{{.DMG_APPLICATIONS_POSITION}}" | cut -d, -f2)
+        WIN_W=$(echo "{{.DMG_WINDOW_SIZE}}" | cut -d, -f1)
+        WIN_H=$(echo "{{.DMG_WINDOW_SIZE}}" | cut -d, -f2)
+        create-dmg \
+          --volname "{{.DISPLAY_APP_NAME}}" \
+          --volicon build/darwin/icons.icns \
+          --background build/darwin/dmg-background.png \
+          --window-pos 200 120 \
+          --window-size "$WIN_W" "$WIN_H" \
+          --icon-size {{.DMG_APP_ICON_SIZE}} \
+          --hide-extension "{{.DISPLAY_APP_NAME}}.app" \
+          --icon "{{.DISPLAY_APP_NAME}}.app" "$APP_X" "$APP_Y" \
+          --app-drop-link "$LINK_X" "$LINK_Y" \
+          "{{.DMG_OUTPUT}}" \
+          "$STAGING/" || true
+        rm -rf "$STAGING"
       - rm -rf "{{.BIN_DIR}}/{{.DISPLAY_APP_NAME}}.app"
 
   run:
