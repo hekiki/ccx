@@ -27,5 +27,3 @@ features:
   - title: Single Binary Deploy
     details: Frontend embedded in binary, single-port deployment, Docker and system service support
 ---
-
-<RecommendedDownload locale="en" />

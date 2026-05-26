@@ -1,11 +1,21 @@
 import DefaultTheme from 'vitepress/theme'
+import { defineComponent, h } from 'vue'
+import { useData } from 'vitepress'
 import RecommendedDownload from './components/RecommendedDownload.vue'
 
 import type { Theme } from 'vitepress'
 
 export default {
   extends: DefaultTheme,
-  enhanceApp({ app }) {
-    app.component('RecommendedDownload', RecommendedDownload)
-  },
+  Layout: defineComponent({
+    setup() {
+      const { lang } = useData()
+
+      return () => h(DefaultTheme.Layout, null, {
+        'home-features-before': () => h(RecommendedDownload, {
+          locale: lang.value.startsWith('en') ? 'en' : 'zh',
+        }),
+      })
+    },
+  }),
 } satisfies Theme
