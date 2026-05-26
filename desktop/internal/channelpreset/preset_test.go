@@ -20,8 +20,9 @@ func TestBuildPayload(t *testing.T) {
 		wantModelMap   map[string]string
 		wantReasoning  map[string]string
 		wantFallback   string
-		wantNormalize  bool
-	}{
+			wantNormalize  bool
+			wantNoVisionModels []string
+		}{
 		{
 			name:         "deepseek messages (anthropic endpoint)",
 			req:          CreateChannelRequest{Provider: ProviderDeepSeek, Target: TargetMessages, APIKey: "sk-test"},
@@ -58,84 +59,91 @@ func TestBuildPayload(t *testing.T) {
 		},
 		{
 			name:         "mimo messages (token plan)",
-			req:          CreateChannelRequest{Provider: ProviderMiMo, Target: TargetMessages, PlanID: "token-sgp-anthropic", APIKey: "tp-test"},
-			wantBaseURL:  "https://token-plan-sgp.xiaomimimo.com/anthropic",
-			wantService:  "claude",
-			wantPassback: true,
-			wantModelMap: map[string]string{
-				"haiku":  "mimo-v2.5-pro",
-				"opus":   "mimo-v2.5-pro",
-				"sonnet": "mimo-v2.5-pro",
-			},
-			wantFallback: "mimo-v2.5",
+				req:          CreateChannelRequest{Provider: ProviderMiMo, Target: TargetMessages, PlanID: "token-sgp-anthropic", APIKey: "tp-test"},
+				wantBaseURL:  "https://token-plan-sgp.xiaomimimo.com/anthropic",
+				wantService:  "claude",
+				wantPassback: true,
+				wantModelMap: map[string]string{
+					"haiku":  "mimo-v2.5-pro",
+					"opus":   "mimo-v2.5-pro",
+					"sonnet": "mimo-v2.5-pro",
+				},
+				wantNoVisionModels: []string{"mimo-v2.5-pro"},
+				wantFallback:       "mimo-v2.5",
 		},
 		{
 			name:         "mimo messages (auto plan)",
-			req:          CreateChannelRequest{Provider: ProviderMiMo, Target: TargetMessages, APIKey: "tp-test"},
-			wantBaseURL:  "https://api.xiaomimimo.com/anthropic",
-			wantService:  "claude",
-			wantPassback: true,
-			wantModelMap: map[string]string{
-				"haiku":  "mimo-v2.5-pro",
-				"opus":   "mimo-v2.5-pro",
-				"sonnet": "mimo-v2.5-pro",
-			},
-			wantFallback: "mimo-v2.5",
+				req:          CreateChannelRequest{Provider: ProviderMiMo, Target: TargetMessages, APIKey: "tp-test"},
+				wantBaseURL:  "https://api.xiaomimimo.com/anthropic",
+				wantService:  "claude",
+				wantPassback: true,
+				wantModelMap: map[string]string{
+					"haiku":  "mimo-v2.5-pro",
+					"opus":   "mimo-v2.5-pro",
+					"sonnet": "mimo-v2.5-pro",
+				},
+				wantNoVisionModels: []string{"mimo-v2.5-pro"},
+				wantFallback:       "mimo-v2.5",
 		},
 		{
 			name:          "mimo chat",
-			req:           CreateChannelRequest{Provider: ProviderMiMo, Target: TargetChat, APIKey: "tp-test"},
-			wantBaseURL:   "https://api.xiaomimimo.com/v1",
-			wantService:   "openai",
-			wantNormalize: true,
-			wantFallback:  "mimo-v2.5",
+				req:           CreateChannelRequest{Provider: ProviderMiMo, Target: TargetChat, APIKey: "tp-test"},
+				wantBaseURL:   "https://api.xiaomimimo.com/v1",
+				wantService:   "openai",
+				wantNormalize: true,
+				wantNoVisionModels: []string{"mimo-v2.5-pro"},
+				wantFallback:  "mimo-v2.5",
 		},
 		{
 			name:        "mimo responses",
-			req:         CreateChannelRequest{Provider: ProviderMiMo, Target: TargetResponses, APIKey: "tp-test"},
-			wantBaseURL: "https://api.xiaomimimo.com/v1",
-			wantService: "openai",
-			wantModelMap: map[string]string{
-				"gpt-5": "mimo-v2.5-pro",
-			},
-			wantFallback: "mimo-v2.5",
+				req:         CreateChannelRequest{Provider: ProviderMiMo, Target: TargetResponses, APIKey: "tp-test"},
+				wantBaseURL: "https://api.xiaomimimo.com/v1",
+				wantService: "openai",
+				wantModelMap: map[string]string{
+					"gpt-5": "mimo-v2.5-pro",
+				},
+				wantNoVisionModels: []string{"mimo-v2.5-pro"},
+				wantFallback: "mimo-v2.5",
 		},
 		{
 			name:         "compshare messages",
-			req:          CreateChannelRequest{Provider: ProviderCompshare, Target: TargetMessages, APIKey: "cs-test"},
-			wantBaseURL:  "https://cp.compshare.cn",
-			wantService:  "claude",
-			wantVision:   false,
-			wantPassback: true,
-			wantModelMap: map[string]string{
-				"haiku":  "deepseek-v4-flash",
-				"opus":   "glm-5.1",
-				"sonnet": "glm-5.1",
-			},
-			wantFallback: "MiniMax-M2.7",
+				req:          CreateChannelRequest{Provider: ProviderCompshare, Target: TargetMessages, APIKey: "cs-test"},
+				wantBaseURL:  "https://cp.compshare.cn",
+				wantService:  "claude",
+				wantVision:   false,
+				wantPassback: true,
+				wantModelMap: map[string]string{
+					"haiku":  "deepseek-v4-flash",
+					"opus":   "glm-5.1",
+					"sonnet": "glm-5.1",
+				},
+				wantNoVisionModels: []string{"deepseek-v4-flash"},
+				wantFallback:       "MiniMax-M2.7",
 		},
 		{
 			name:          "compshare chat",
-			req:           CreateChannelRequest{Provider: ProviderCompshare, Target: TargetChat, APIKey: "cs-test"},
-			wantBaseURL:   "https://cp.compshare.cn/v1",
-			wantService:   "openai",
-			wantNormalize: true,
-			wantVision:    false,
-			wantFallback:  "MiniMax-M2.7",
+				req:           CreateChannelRequest{Provider: ProviderCompshare, Target: TargetChat, APIKey: "cs-test"},
+				wantBaseURL:   "https://cp.compshare.cn/v1",
+				wantService:   "openai",
+				wantNormalize: true,
+				wantVision:    false,
+				wantNoVisionModels: []string{"deepseek-v4-flash"},
+				wantFallback:  "MiniMax-M2.7",
 		},
 		{
 			name:           "compshare responses",
-			req:            CreateChannelRequest{Provider: ProviderCompshare, Target: TargetResponses, APIKey: "cs-test"},
-			wantBaseURL:    "https://cp.compshare.cn/v1",
-			wantService:    "openai",
-			wantVision:     false,
-			wantNativeTool: true,
-			wantNormalize:  true,
-			wantModelMap: map[string]string{
-				"gpt":  "glm-5.1",
-				"mini": "deepseek-v4-flash",
-			},
-			wantFallback: "MiniMax-M2.7",
+				req:            CreateChannelRequest{Provider: ProviderCompshare, Target: TargetResponses, APIKey: "cs-test"},
+				wantBaseURL:    "https://cp.compshare.cn/v1",
+				wantService:    "openai",
+				wantVision:     false,
+				wantNativeTool: true,
+				wantNormalize:  true,
+				wantModelMap: map[string]string{
+					"gpt":  "glm-5.1",
+					"mini": "deepseek-v4-flash",
+				},
+				wantNoVisionModels: []string{"deepseek-v4-flash"},
+				wantFallback:       "MiniMax-M2.7",
 		},
 		{
 			name:          "kimi chat",
@@ -288,6 +296,11 @@ func TestBuildPayload(t *testing.T) {
 			for source, target := range tt.wantReasoning {
 				if got.ReasoningMapping[source] != target {
 					t.Fatalf("ReasoningMapping[%q] = %q, want %q; all mappings: %#v", source, got.ReasoningMapping[source], target, got.ReasoningMapping)
+				}
+			}
+						if tt.wantNoVisionModels != nil {
+				if !slices.Equal(got.NoVisionModels, tt.wantNoVisionModels) {
+					t.Fatalf("NoVisionModels = %v, want %v", got.NoVisionModels, tt.wantNoVisionModels)
 				}
 			}
 			if tt.wantFallback != "" {
