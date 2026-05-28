@@ -304,16 +304,15 @@ export const useChannelStore = defineStore('channel', () => {
               ? geminiChannelsData.value
               : (isResponses ? responsesChannelsData.value : channelsData.value)
 
-        // 找到新添加的渠道（应该是列表中 index 最大的 active 状态渠道）
-        const activeChannels = data.channels?.filter(ch => ch.status !== 'disabled') || []
-        if (activeChannels.length > 0) {
-          // 新添加的渠道会分配到最大的 index
-          const newChannel = activeChannels.reduce((max, ch) => ch.index > max.index ? ch : max, activeChannels[0])
-
+        // 后端 AddUpstream 把新渠道 prepend 到首位，因此通过 name 精确匹配定位
+        // （不能用 "index 最大" 启发——后端是 unshift，新渠道 index = 0；其他渠道 index 全部 +1）
+        const allChannels = data.channels || []
+        const newChannel = allChannels.find(ch => ch.name === channel.name && ch.status !== 'disabled')
+        if (newChannel) {
           try {
-            // 1. 重新排序：将新渠道放到第一位
-            const otherIndexes = activeChannels
-              .filter(ch => ch.index !== newChannel.index)
+            // 1. 重新排序：将新渠道放到第一位（其余渠道按既有 priority/index 升序）
+            const otherIndexes = allChannels
+              .filter(ch => ch.index !== newChannel.index && ch.status !== 'disabled')
               .sort((a, b) => (a.priority ?? a.index) - (b.priority ?? b.index))
               .map(ch => ch.index)
             const newOrder = [newChannel.index, ...otherIndexes]

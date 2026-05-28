@@ -7,15 +7,48 @@ import { deduplicateEquivalentBaseUrls, type ServiceType } from './baseUrlSemant
  */
 
 /**
- * 检测字符串是否看起来像配置键名（全大写 + 下划线分隔的单词）
- * 例如：API_TIMEOUT_MS, ANTHROPIC_BASE_URL, CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC
+ * 检测字符串是否看起来像配置键名
+ * - 全大写 + 下划线分隔的多段单词：API_TIMEOUT_MS, ANTHROPIC_BASE_URL
+ * - 全小写常见配置字段名：api_key, base_url, url, name, token, auth, secret, endpoint, model, type
+ *   （来自用户粘贴 yaml/markdown 配置时的字段名残留，而不是真实密钥）
  */
 const looksLikeConfigKey = (token: string): boolean => {
-  // 全大写字母 + 下划线，且由多个单词组成（至少包含一个下划线分隔的段）
-  // 且每个段都是 2+ 字符的大写字母单词
+  // 1) 全大写字母 + 下划线，且由多个单词组成（至少包含一个下划线分隔的段）
   if (/^[A-Z][A-Z0-9]*(_[A-Z][A-Z0-9]*)+$/.test(token)) {
     return true
   }
+
+  // 2) 全小写、常见配置字段名（精确白名单避免误伤短前缀密钥如 hf_short / r8_abc）
+  const LOWERCASE_CONFIG_KEYS = new Set<string>([
+    'api_key',
+    'apikey',
+    'api_secret',
+    'access_key',
+    'access_token',
+    'auth_token',
+    'auth_key',
+    'secret_key',
+    'secret',
+    'token',
+    'auth',
+    'base_url',
+    'baseurl',
+    'base',
+    'url',
+    'endpoint',
+    'host',
+    'name',
+    'model',
+    'model_name',
+    'type',
+    'service_type',
+    'provider',
+    'env',
+  ])
+  if (LOWERCASE_CONFIG_KEYS.has(token.toLowerCase())) {
+    return true
+  }
+
   return false
 }
 
@@ -143,12 +176,20 @@ export const isValidUrl = (token: string): boolean => {
 
 /**
  * 从输入中提取所有 token
- * 按空白/逗号/分号/中文冒号/换行/引号（中英文）/等号/%20 分割
+ * 按空白/逗号/分号/中英文冒号/换行/引号（中英文）/等号/%20 分割
+ * 注意：URL 里的 `://` 冒号必须保留，否则会被误切。
  */
 const extractTokens = (input: string): string[] => {
-  return input
+  // 用占位符保护整段 URL 中的所有冒号（含 `://` 协议冒号与 `host:port` 端口冒号），
+  // 避免被英文冒号分隔符切碎。匹配范围：从 `http(s)://` 到下一个空白/引号/中文标点/逗号/分号/换行。
+  const COLON_PLACEHOLDER = '__URLCOLON__'
+  const protectedInput = input
     .replace(/%20/g, ' ')
-    .split(/[\n\s,;，；：="\u201c\u201d'\u2018\u2019]+/)
+    .replace(/https?:\/\/[^\s,;，；：="“”'‘’\n]+/g, m => m.replace(/:/g, COLON_PLACEHOLDER))
+
+  return protectedInput
+    .split(/[\n\s,;，；：:="“”'‘’]+/)
+    .map(t => t.split(COLON_PLACEHOLDER).join(':'))
     .filter(t => t.length > 0)
 }
 

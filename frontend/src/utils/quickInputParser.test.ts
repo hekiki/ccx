@@ -580,3 +580,43 @@ sk-key1234567890`
     ])
   })
 })
+
+describe('裸字段名（应被排除）', () => {
+  it('不应将裸 api_key 字面量识别为 key', () => {
+    expect(isValidApiKey('api_key')).toBe(false)
+    expect(isValidApiKey('API_KEY')).toBe(false)
+    expect(isValidApiKey('apiKey')).toBe(false)
+    expect(isValidApiKey('apikey')).toBe(false)
+  })
+
+  it('不应将裸 base_url / url / name 等字面量识别为 key', () => {
+    expect(isValidApiKey('base_url')).toBe(false)
+    expect(isValidApiKey('url')).toBe(false)
+    expect(isValidApiKey('name')).toBe(false)
+    expect(isValidApiKey('token')).toBe(false)
+    expect(isValidApiKey('auth')).toBe(false)
+    expect(isValidApiKey('secret')).toBe(false)
+    expect(isValidApiKey('endpoint')).toBe(false)
+  })
+
+  it('应在英文冒号分隔的"字段名: 值"中只提取值', () => {
+    const input = `url: https://codeapi.icu/
+api_key:
+sk-11111
+sk-22222
+sk-33333`
+    const result = parseQuickInput(input)
+    expect(result.detectedBaseUrls).toEqual(['https://codeapi.icu'])
+    expect(result.detectedApiKeys).toEqual(['sk-11111', 'sk-22222', 'sk-33333'])
+    // 关键：不能把 api_key 当作 key
+    expect(result.detectedApiKeys).not.toContain('api_key')
+    expect(result.detectedApiKeys).not.toContain('api_key:')
+  })
+
+  it('应在英文冒号紧跟值时正确切分', () => {
+    const input = 'api_key:sk-abc123 url:https://api.example.com'
+    const result = parseQuickInput(input)
+    expect(result.detectedApiKeys).toEqual(['sk-abc123'])
+    expect(result.detectedBaseUrls).toEqual(['https://api.example.com'])
+  })
+})
